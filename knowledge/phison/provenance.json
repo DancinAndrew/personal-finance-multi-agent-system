@@ -1,0 +1,56 @@
+[
+  {
+    "claim_id": "claim_revenue_202604",
+    "page": "Company_Phison_8299.md",
+    "claim": "群聯 2026 年 4 月營收為 20,207,493 千元，年增 236.63%。",
+    "source_ids": ["S1"],
+    "as_of_date": "2026-05-08",
+    "reliability": "official_monthly_revenue",
+    "status": "active"
+  },
+  {
+    "claim_id": "claim_q1_eps_2026",
+    "page": "Company_Phison_8299.md",
+    "claim": "新聞轉述群聯 2026 Q1 EPS 為 68.8 元。",
+    "source_ids": ["S3"],
+    "as_of_date": "2026-05-08",
+    "reliability": "financial_news",
+    "status": "needs_review"
+  },
+  {
+    "claim_id": "claim_eps_factset_avg",
+    "page": "Valuation_EPS_Assumptions.md",
+    "claim": "FactSet 2026 EPS 平均為 192.4 元。",
+    "source_ids": ["S5"],
+    "as_of_date": "2026-05-04",
+    "reliability": "consensus_estimate",
+    "status": "active"
+  },
+  {
+    "claim_id": "claim_eps_capital_20260507",
+    "page": "Valuation_EPS_Assumptions.md",
+    "claim": "群益 2026-05-07 摘要預估 2026 EPS 約 307.99 元。",
+    "source_ids": ["S4"],
+    "as_of_date": "2026-05-07",
+    "reliability": "brokerage_summary",
+    "status": "active"
+  },
+  {
+    "claim_id": "claim_ftnn_broker_names",
+    "page": "Brokerage_View_Summary.md",
+    "claim": "FTNN 報導提到野村、麥格理、國泰證期、凱基投顧。",
+    "source_ids": ["S6"],
+    "as_of_date": "2026-04-11",
+    "reliability": "brokerage_news_summary",
+    "status": "active"
+  },
+  {
+    "claim_id": "claim_cmoney_10_brokers_anonymous",
+    "page": "Brokerage_View_Summary.md",
+    "claim": "CMoney 03/09 指出 10 家券商看多，但未揭露完整名單。",
+    "source_ids": ["S8"],
+    "as_of_date": "2026-03-09",
+    "reliability": "brokerage_summary",
+    "status": "active"
+  }
+]

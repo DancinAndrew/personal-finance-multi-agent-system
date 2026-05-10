@@ -1,0 +1,10 @@
+{
+  "ticker": "8299",
+  "name": "群聯電子",
+  "price": 2430,
+  "currency": "TWD",
+  "as_of_date": "2026-05-10",
+  "source": "manual_demo_fixture",
+  "is_live_market_data": false,
+  "display_note": "此價格只作本機 demo 計算，不是即時行情；正式輸出必須重新確認股價與日期。"
+}

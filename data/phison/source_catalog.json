@@ -1,0 +1,102 @@
+[
+  {
+    "id": "S1",
+    "title": "群聯官方每月營業額：2026 年 4 月營收",
+    "source": "群聯官方投資人關係",
+    "source_type": "official_monthly_revenue",
+    "date": "2026-05-08",
+    "url_or_path": "https://www.phison.com/en/investor-relations/financials/monthly-revenue",
+    "reliability_note": "公司官方月營收資料，可作為營收硬數據；仍需搭配完整財報理解毛利與現金流。",
+    "excerpt_path": "data/phison/sources/S1_official_monthly_revenue.md"
+  },
+  {
+    "id": "S2",
+    "title": "鉅亨：群聯 4 月營收 202.07 億元",
+    "source": "鉅亨",
+    "source_type": "revenue_news",
+    "date": "2026-05-08",
+    "url_or_path": "https://m.cnyes.com/news/id/6450149",
+    "reliability_note": "新聞速報，適合補充月增、年增與市場事件脈絡；核心數字應回到官方月營收驗證。",
+    "excerpt_path": "data/phison/sources/S2_cnyes_revenue_news.md"
+  },
+  {
+    "id": "S3",
+    "title": "經濟日報：群聯 2026 Q1 EPS 68.8 元",
+    "source": "經濟日報",
+    "source_type": "financial_news",
+    "date": "2026-05-08",
+    "url_or_path": "https://money.udn.com/money/story/5607/9490943",
+    "reliability_note": "財報新聞轉述，適合 demo；正式分析需回到 MOPS 或公司財報補驗。",
+    "excerpt_path": "data/phison/sources/S3_udn_q1_financial_news.md"
+  },
+  {
+    "id": "S4",
+    "title": "CMoney 05/07：群益證券看多，目標價 3,080 元",
+    "source": "CMoney",
+    "source_type": "brokerage_summary",
+    "date": "2026-05-07",
+    "url_or_path": "https://www.cmoney.tw/notes/note-detail.aspx?nid=1184683",
+    "reliability_note": "券商評等摘要，不是完整券商研報；可用於 EPS 與目標價情境，不得聲稱讀過全文。",
+    "excerpt_path": "data/phison/sources/S4_cmoney_capital_20260507.md"
+  },
+  {
+    "id": "S5",
+    "title": "鉅亨 FactSet：2026 EPS 共識預估",
+    "source": "鉅亨 / FactSet",
+    "source_type": "consensus_estimate",
+    "date": "2026-05-04",
+    "url_or_path": "https://m.cnyes.com/news/id/6441530",
+    "reliability_note": "FactSet 共識經新聞平台轉載，可作為市場中樞與分散程度；不是單一券商模型。",
+    "excerpt_path": "data/phison/sources/S5_factset_consensus.md"
+  },
+  {
+    "id": "S6",
+    "title": "FTNN：野村、麥格理、國泰證期、凱基目標價整理",
+    "source": "FTNN",
+    "source_type": "brokerage_news_summary",
+    "date": "2026-04-11",
+    "url_or_path": "https://www.ftnn.com.tw/news/537193",
+    "reliability_note": "新聞彙整券商觀點；適合確認公開可見的券商名單與目標價區間，不等於完整研報。",
+    "excerpt_path": "data/phison/sources/S6_ftnn_brokerage_summary.md"
+  },
+  {
+    "id": "S7",
+    "title": "CMoney 04/09：群益證券看多，目標價 2,280 元",
+    "source": "CMoney",
+    "source_type": "brokerage_summary",
+    "date": "2026-04-09",
+    "url_or_path": "https://www.cmoney.tw/notes/note-detail.aspx?nid=1162816",
+    "reliability_note": "同一券商較早期摘要，可與 05/07 群益目標價上修比較。",
+    "excerpt_path": "data/phison/sources/S7_cmoney_capital_20260409.md"
+  },
+  {
+    "id": "S8",
+    "title": "CMoney 03/09：10 家券商看多與目標價區間",
+    "source": "CMoney",
+    "source_type": "brokerage_summary",
+    "date": "2026-03-09",
+    "url_or_path": "https://www.cmoney.tw/notes/note-detail.aspx?nid=1141225",
+    "reliability_note": "CMoney 指出 10 家券商看多，但未揭露完整名單；系統不得自行補齊名單。",
+    "excerpt_path": "data/phison/sources/S8_cmoney_brokerage_range.md"
+  },
+  {
+    "id": "S9",
+    "title": "經濟日報：國泰期貨早期群聯估計",
+    "source": "經濟日報",
+    "source_type": "brokerage_news_summary",
+    "date": "2025-12-24",
+    "url_or_path": "https://money.udn.com/money/story/5710/9223332",
+    "reliability_note": "較早期新聞轉述，可作為估計上修前的低基準；不應當成最新共識。",
+    "excerpt_path": "data/phison/sources/S9_udn_cathay_futures.md"
+  },
+  {
+    "id": "S10",
+    "title": "CMoney 01/26：福邦投顧看多，目標價 2,800 元",
+    "source": "CMoney",
+    "source_type": "brokerage_summary",
+    "date": "2026-01-26",
+    "url_or_path": "https://www.cmoney.tw/notes/note-detail.aspx?nid=1091767",
+    "reliability_note": "較早期券商摘要，年度假設與目前研究問題不完全一致，僅作歷史參考。",
+    "excerpt_path": "data/phison/sources/S10_cmoney_fubon.md"
+  }
+]

@@ -1,0 +1,85 @@
+"""Local Markdown / JSON fixture store."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any
+
+
+class FixtureNotFoundError(FileNotFoundError):
+    """Raised when a required local fixture is missing."""
+
+
+class FileStore:
+    """Read local fixtures for the deterministic MVP."""
+
+    def __init__(self, repo_root: Path) -> None:
+        self.repo_root = repo_root
+
+    def load_demo_run(self) -> dict[str, Any]:
+        return self._load_json("data/phison/demo_run.json")
+
+    def load_price_fixture(self) -> dict[str, Any]:
+        return self._load_json("data/phison/price_fixture.json")
+
+    def load_source_catalog(self) -> list[dict[str, Any]]:
+        data = self._load_json("data/phison/source_catalog.json")
+        if not isinstance(data, list):
+            raise ValueError("source_catalog.json must contain a list")
+        return data
+
+    def load_rubric(self) -> dict[str, Any]:
+        return self._load_json("data/evaluation/rubric.json")
+
+    def load_provenance(self) -> list[dict[str, Any]]:
+        data = self._load_json("knowledge/phison/provenance.json")
+        if not isinstance(data, list):
+            raise ValueError("provenance.json must contain a list")
+        return data
+
+    def load_source_excerpts(self, source_ids: list[str] | None = None) -> dict[str, str]:
+        catalog = self.load_source_catalog()
+        selected_ids = set(source_ids or [source["id"] for source in catalog])
+        excerpts: dict[str, str] = {}
+        for source in catalog:
+            if source["id"] not in selected_ids:
+                continue
+            excerpt_path = source.get("excerpt_path")
+            if not excerpt_path:
+                continue
+            excerpts[source["id"]] = self._load_text(excerpt_path)
+        return excerpts
+
+    def load_wiki_pages(self) -> list[dict[str, str]]:
+        pages_dir = self.repo_root / "knowledge/phison/pages"
+        if not pages_dir.exists():
+            raise FixtureNotFoundError(f"Missing wiki directory: {pages_dir}")
+
+        pages = [
+            {"name": path.name, "content": path.read_text(encoding="utf-8")}
+            for path in sorted(pages_dir.glob("*.md"))
+        ]
+        contradiction_log = self.repo_root / "knowledge/phison/Contradiction_Log.md"
+        pages.append(
+            {
+                "name": "Contradiction_Log.md",
+                "content": contradiction_log.read_text(encoding="utf-8"),
+            }
+        )
+        return pages
+
+    def _load_json(self, relative_path: str) -> Any:
+        path = self.repo_root / relative_path
+        if not path.exists():
+            raise FixtureNotFoundError(f"Missing fixture: {path}")
+        try:
+            return json.loads(path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"Invalid JSON fixture: {path}") from exc
+
+    def _load_text(self, relative_path: str) -> str:
+        path = self.repo_root / relative_path
+        if not path.exists():
+            raise FixtureNotFoundError(f"Missing fixture: {path}")
+        return path.read_text(encoding="utf-8")

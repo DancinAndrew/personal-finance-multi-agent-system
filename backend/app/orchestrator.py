@@ -1,0 +1,121 @@
+"""Research orchestration for the deterministic MVP."""
+
+from __future__ import annotations
+
+from datetime import datetime, timezone
+from typing import Any
+
+from .agents import (
+    EvaluationAgent,
+    FundamentalAgent,
+    IntentRouter,
+    NewsSectorAgent,
+    ReportGenerator,
+    RiskAgent,
+    SourceRetrieval,
+)
+from .store import FileStore
+
+
+class ResearchOrchestrator:
+    """Run the deterministic multi-agent research workflow."""
+
+    def __init__(self, store: FileStore) -> None:
+        self.store = store
+        self.intent_router = IntentRouter()
+        self.source_retrieval = SourceRetrieval()
+        self.news_sector_agent = NewsSectorAgent()
+        self.fundamental_agent = FundamentalAgent()
+        self.risk_agent = RiskAgent()
+        self.report_generator = ReportGenerator()
+        self.evaluation_agent = EvaluationAgent()
+
+    def run_default(self) -> dict[str, Any]:
+        """Run the default Phison research task."""
+
+        return self.run({})
+
+    def run(self, payload: dict[str, Any]) -> dict[str, Any]:
+        """Run the deterministic workflow and return a JSON-ready result."""
+
+        demo = self.store.load_demo_run()
+        price_fixture = self.store.load_price_fixture()
+        target = payload.get("target") or demo["target"]
+        question = payload.get("question") or demo["question"]
+        price = float(payload.get("price") or price_fixture["price"])
+        price_date = str(payload.get("price_date") or price_fixture["as_of_date"])
+        price_note = (
+            f"{price:.0f} 元，日期 {price_date}，不是即時行情；正式使用前必須重新確認。"
+        )
+        run_id = str(payload.get("id") or demo["id"])
+        now = datetime.now(timezone.utc).isoformat()
+
+        sources = self.store.load_source_catalog()
+        wiki_pages = self.store.load_wiki_pages()
+        provenance = self.store.load_provenance()
+        rubric = self.store.load_rubric()
+
+        steps: list[dict[str, Any]] = []
+
+        route = self.intent_router.run(run_id, question, target)
+        steps.append(route.step)
+        retrieval = self.source_retrieval.run(run_id, sources, wiki_pages, provenance)
+        steps.append(retrieval.step)
+        narrative = self.news_sector_agent.run(run_id)
+        steps.append(narrative.step)
+        fundamentals = self.fundamental_agent.run(run_id, price, price_date)
+        steps.append(fundamentals.step)
+        risks = self.risk_agent.run(run_id)
+        steps.append(risks.step)
+        report = self.report_generator.run(
+            run_id,
+            question,
+            target,
+            narrative.payload,
+            fundamentals.payload,
+            risks.payload,
+            price_note,
+        )
+        steps.append(report.step)
+        evaluation = self.evaluation_agent.run(
+            run_id,
+            report.payload["report_markdown"],
+            rubric,
+            len(provenance),
+        )
+        steps.append(evaluation.step)
+
+        return {
+            "run": {
+                "id": run_id,
+                "target": target,
+                "question": question,
+                "status": "completed",
+                "mode": "deterministic_demo",
+                "created_at": now,
+                "completed_at": datetime.now(timezone.utc).isoformat(),
+                "evaluation_score": evaluation.payload["total_score"],
+                "price_fixture": {
+                    "price": price,
+                    "as_of_date": price_date,
+                    "is_live_market_data": False,
+                    "display_note": price_note,
+                },
+            },
+            "steps": steps,
+            "sources": sources,
+            "wiki": {
+                "pages": wiki_pages,
+                "provenance": provenance,
+            },
+            "analysis": {
+                "route": route.payload,
+                "retrieval": retrieval.payload,
+                "narrative": narrative.payload,
+                "fundamentals": fundamentals.payload,
+                "risks": risks.payload,
+            },
+            "report": report.payload,
+            "evaluation": evaluation.payload,
+            "disclaimer": "本系統只提供研究輔助，不提供買賣建議或交易執行。",
+        }
