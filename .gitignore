@@ -1,0 +1,30 @@
+.DS_Store
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.pyright/
+
+# Node / frontend
+node_modules/
+dist/
+build/
+.vite/
+
+# Logs and caches
+*.log
+.cache/
+
+# External course materials: keep only the curated final-project summary used by this project.
+TAICA_AIASE2026-main/*
+!TAICA_AIASE2026-main/final_project_資訊整理.md
