@@ -65,6 +65,7 @@ flowchart LR
   Orchestrator --> Retrieval["Source Retrieval"]
   Orchestrator --> NewsAgent["News / Sector Agent"]
   Orchestrator --> FundamentalAgent["Fundamental / Valuation Agent"]
+  Orchestrator --> HealthAgent["Health Check Agent"]
   Orchestrator --> RiskAgent["Risk / Opposing View Agent"]
   Orchestrator --> ReportAgent["Report Generator"]
   Orchestrator --> EvalAgent["Evaluation Agent"]
@@ -133,6 +134,7 @@ flowchart LR
 | `AgentTimeline` | 代理執行軌跡 |
 | `AgentStepDrawer` | 單一 agent step 詳細資料 |
 | `SourceList` | 來源清單與可信度標示 |
+| `HealthCheckPanel` | 顯示七種股票健診、狀態、理由、缺口與來源限制 |
 | `ReportViewer` | 報告顯示與 claim-source linking |
 | `EvaluationPanel` | 分數、rubric、修正建議 |
 | `WikiPageViewer` | 顯示 LLMWiki-lite 研究頁與 provenance |
@@ -175,6 +177,7 @@ flowchart LR
 | `agents/source_retrieval.py` | 從 fixture / golden sample / Obsidian 取資料 |
 | `agents/news_sector_agent.py` | 整理新聞與產業敘事 |
 | `agents/fundamental_agent.py` | 整理財務、EPS、估值情境 |
+| `agents/health_check_agent.py` | 將七種股票健診轉成保守、可審計的狀態、理由與資料缺口 |
 | `agents/risk_agent.py` | 產生反方觀點與風險 |
 | `agents/report_generator.py` | 產生研究報告 |
 | `agents/evaluation_agent.py` | 依 rubric 評分 |
@@ -195,6 +198,7 @@ sequenceDiagram
   participant S as Source Retrieval
   participant N as News / Sector Agent
   participant F as Fundamental Agent
+  participant H as Health Check Agent
   participant K as Risk Agent
   participant G as Report Generator
   participant E as Evaluation Agent
@@ -210,6 +214,8 @@ sequenceDiagram
   N-->>O: sector thesis
   O->>F: analyze financials / valuation
   F-->>O: valuation scenarios
+  O->>H: run conservative stock health checks
+  H-->>O: health-check statuses + data gaps
   O->>K: analyze risks / opposing view
   K-->>O: risk map
   O->>G: generate report
@@ -219,6 +225,144 @@ sequenceDiagram
   O-->>API: run result + trace
   API-->>U: report + trace + evaluation
 ```
+
+### 6.1 第二階段最小切片：Health Check Agent
+
+Health Check Agent 是財報狗 benchmark 升級的第一個可執行切片。它的目的不是重做財報狗，也不是猜出付費資料，而是把「七種股票健診」變成可追溯、可顯示、可被 evaluation 檢查的研究框架。
+
+#### 6.1.1 範圍與非範圍
+
+| 類別 | 決策 |
+|---|---|
+| 第一版資料策略 | 保守缺口型：只使用已整理公開 fixture、source catalog、wiki context 與報告內已有的示範估值資料 |
+| 不足資料處理 | 不足以判斷時標 `unknown`；登入、付費、未納入 fixture 或第一版資料入口不存在時標 `not_available` |
+| 不允許行為 | 不得用 mock 數字補 pass / fail；不得宣稱讀取財報狗登入或付費頁；不得把 health check 當買賣建議 |
+| 本切片輸出 | agent step、`analysis.health_checks`、報告中的股票健診摘要、前端 Health tab、evaluation 檢查 |
+| 延後事項 | 自動抓財報狗、Exa / crawler、Supabase 持久化、真實 LLM 推理、完整財報資料庫 |
+
+#### 6.1.2 狀態語意
+
+Health check 狀態必須使用固定 enum，避免 UI、report 與 evaluation 各自解讀。
+
+| Wire value | 中文顯示 | 語意 |
+|---|---|---|
+| `pass` | 通過 | 現有 fixture 足以支持該健診通過，且有 source IDs 或明確計算依據 |
+| `fail` | 未通過 | 現有 fixture 足以支持該健診未通過，且有 source IDs 或明確計算依據 |
+| `unknown` | 資料不足 | 有部分線索或理論上可用公開資料補齊，但目前資料不足，不能誠實判定通過或未通過 |
+| `not_available` | 目前不可用 | 需要登入、付費、外部資料源、尚未納入 fixture，或第一版不處理 |
+
+`unknown` 和 `not_available` 不可混用。`unknown` 代表可以透過補公開財報、歷史資料或人工整理改善；`not_available` 代表目前產品邊界內沒有資料入口或權限。
+
+#### 6.1.3 Health check fixture schema
+
+第一版應以 `data/phison/health_check_fixture.json` 作為 deterministic input。每筆 check 必須符合以下資料契約：
+
+```json
+{
+  "id": "growth_stock",
+  "name": "成長股健診",
+  "status": "unknown",
+  "status_reason": "公開來源顯示營收與 Q1 EPS 轉強，但缺近三個月月營收 YoY、毛利、營業利益、稅前與稅後淨利年增的完整序列。",
+  "criteria": [
+    {
+      "id": "monthly_revenue_yoy_3m_positive",
+      "label": "月營收 YoY 連續三個月大於 0",
+      "status": "unknown",
+      "source_ids": ["S1", "S2"],
+      "missing_data": ["近三個月月營收 YoY 序列"]
+    }
+  ],
+  "source_ids": ["S1", "S2", "S3"],
+  "missing_data": ["近一季毛利年增率", "近一季營業利益年增率"],
+  "report_takeaway": "目前只能說成長題材有營收與 EPS 線索，不能完整判定成長股健診通過。",
+  "data_policy": "public_fixture_only"
+}
+```
+
+欄位規則：
+
+- `id` 必須穩定，供測試、UI key、report section 與 evaluation 使用。
+- `status` 只能是 `pass`、`fail`、`unknown`、`not_available`。
+- `source_ids` 只能引用已存在 source catalog 的 ID；如果沒有可用來源，使用空陣列並在 `missing_data` 說明。
+- `criteria` 用來保留財報狗式指標拆解；第一版不要求每個 criteria 都有數字，但必須知道缺什麼。
+- `report_takeaway` 是報告可直接引用的保守解讀，不得含買賣指令或保證語氣。
+- `data_policy` 第一版固定為 `public_fixture_only`。
+
+#### 6.1.4 七種股票健診的第一版判定
+
+| Check ID | 健診 | 第一版 expected status | 原因與缺口 |
+|---|---|---|---|
+| `landmine_risk` | 排除地雷股 | `unknown` | 缺近五年自由現金流、營業現金流對淨利比、應收帳款週轉天數、存貨週轉天數 |
+| `dividend_income` | 定存股 | `unknown` | 缺近一年殖利率、五年平均殖利率、連續配息、股息發放率 |
+| `growth_stock` | 成長股 | `unknown` | 有營收與 Q1 EPS 線索，但缺完整月營收 YoY、毛利、營業利益、稅前與稅後淨利年增序列 |
+| `value_stock` | 便宜股 | `unknown` | 有示範 P/E 情境，但缺五年 P/E percentile、P/B、殖利率與市場排名 |
+| `chip_signal` | 籌碼 | `not_available` | 分點、大股東、董監持股與股東人數需要額外資料源或登入 / 付費資料 |
+| `quality_stock` | 績優股 | `unknown` | 缺上市年限確認、自由現金流報酬率、三年營業利益與估值品質排名 |
+| `turnaround_stock` | 轉機股 | `unknown` | 缺 P/B、Piotroski F-score 與低估值排名，且群聯目前 thesis 不是低迷反轉題材 |
+
+第一版不應為了讓 demo 好看而硬產生 `pass`。若某項 check 未來取得足夠資料，才允許改成 `pass` 或 `fail`。
+
+#### 6.1.5 Orchestrator 與 response contract
+
+Health Check Agent 必須在 Fundamental Agent 之後、Risk Agent 之前執行，因為它會使用營收、EPS、估值與資料缺口來補充風險判讀。
+
+完整 run response 應新增：
+
+```json
+{
+  "analysis": {
+    "health_checks": {
+      "summary": {
+        "total": 7,
+        "pass": 0,
+        "fail": 0,
+        "unknown": 6,
+        "not_available": 1,
+        "data_policy": "public_fixture_only",
+        "major_gaps": ["現金流", "股利", "籌碼", "長期估值區間"]
+      },
+      "checks": []
+    }
+  }
+}
+```
+
+Agent step 的 `output_summary` 必須包含檢核總數與缺口概況，例如：「完成 7 種股票健診框架，0 pass、0 fail、6 unknown、1 not_available；主要缺口為現金流、股利、籌碼與長期估值區間。」
+
+#### 6.1.6 Report integration
+
+Report Generator 必須新增「股票健診摘要」段落，至少包含：
+
+- 七種健診的狀態表。
+- 每項的保守 takeaway。
+- 主要缺口清單。
+- 明確註記：這不是財報狗登入 / 付費資料結果，而是本機公開 fixture 的保守框架化輸出。
+
+報告不得：
+
+- 把 `unknown` 寫成「通過」或「偏多」。
+- 把 `not_available` 寫成「尚可」或「資料良好」。
+- 因為 health check 缺資料就跳過該段落；缺資料本身就是輸出的一部分。
+
+#### 6.1.7 Frontend integration
+
+前端應在既有 detail panel 新增 `Health` tab：
+
+- 顯示七個 health check cards 或 rows。
+- 每項顯示狀態 chip、reason、missing data、source IDs。
+- `unknown` 和 `not_available` 要視覺上和 `pass` / `fail` 明顯不同，避免使用者誤會。
+- 在 summary band 可顯示 health-check gap summary，例如 `Health gaps: 6 unknown / 1 N/A`。
+- mobile viewport 下不得因 criteria 或 missing data 文字過長而溢出。
+
+#### 6.1.8 Evaluation integration
+
+Evaluation Agent 必須新增 health-check 完整性與資料誠實度檢查：
+
+- 若報告缺少「股票健診摘要」，應降分或標 `needs_revision`。
+- 若七種健診沒有全部出現，應降分。
+- 若報告把 `unknown` 或 `not_available` 包裝成通過、買進理由或完整資料，應觸發 hard fail。
+- 若報告宣稱使用財報狗付費 / 登入資料，但 fixture 沒有該來源，應觸發 hard fail。
+- 若 health check 明確列出缺口與補資料方向，應提高 user usefulness 與 risk coverage 的評分理由。
 
 ## 7. LLMWiki-lite 研究 Wiki 層
 

@@ -14,6 +14,8 @@ class FixtureNotFoundError(FileNotFoundError):
 class FileStore:
     """Read local fixtures for the deterministic MVP."""
 
+    HEALTH_STATUSES = {"pass", "fail", "unknown", "not_available"}
+
     def __init__(self, repo_root: Path) -> None:
         self.repo_root = repo_root
 
@@ -31,6 +33,36 @@ class FileStore:
 
     def load_rubric(self) -> dict[str, Any]:
         return self._load_json("data/evaluation/rubric.json")
+
+    def load_health_checks(self) -> list[dict[str, Any]]:
+        data = self._load_json("data/phison/health_check_fixture.json")
+        if not isinstance(data, list):
+            raise ValueError("health_check_fixture.json must contain a list")
+
+        source_ids = {source["id"] for source in self.load_source_catalog()}
+        required = {
+            "id",
+            "name",
+            "status",
+            "status_reason",
+            "criteria",
+            "source_ids",
+            "missing_data",
+            "report_takeaway",
+            "data_policy",
+        }
+        for check in data:
+            missing = required.difference(check)
+            if missing:
+                raise ValueError(f"Health check fixture missing fields: {sorted(missing)}")
+            self._validate_health_status(check["status"])
+            self._validate_source_ids(check["source_ids"], source_ids, check["id"])
+            if not isinstance(check["criteria"], list):
+                raise ValueError(f"Health check criteria must be a list: {check['id']}")
+            for criterion in check["criteria"]:
+                self._validate_health_status(criterion.get("status"))
+                self._validate_source_ids(criterion.get("source_ids", []), source_ids, criterion["id"])
+        return data
 
     def load_provenance(self) -> list[dict[str, Any]]:
         data = self._load_json("knowledge/phison/provenance.json")
@@ -83,3 +115,17 @@ class FileStore:
         if not path.exists():
             raise FixtureNotFoundError(f"Missing fixture: {path}")
         return path.read_text(encoding="utf-8")
+
+    def _validate_health_status(self, status: Any) -> None:
+        if status not in self.HEALTH_STATUSES:
+            raise ValueError(f"Invalid health check status: {status}")
+
+    def _validate_source_ids(
+        self,
+        ids: list[str],
+        valid_source_ids: set[str],
+        owner_id: str,
+    ) -> None:
+        invalid = set(ids).difference(valid_source_ids)
+        if invalid:
+            raise ValueError(f"Unknown source ids for {owner_id}: {sorted(invalid)}")

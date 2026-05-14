@@ -143,7 +143,7 @@ select {
 
 .summary-band {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
   gap: 12px;
   margin-top: 16px;
 }
@@ -274,7 +274,7 @@ select {
 
 .tabs {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, 1fr);
   gap: 6px;
   border-bottom: 1px solid #e4e9f0;
   padding: 10px;
@@ -334,6 +334,85 @@ select {
   font-size: 12px;
   font-weight: 800;
   text-decoration: none;
+}
+
+.tab-note {
+  margin-bottom: 12px;
+  color: #6b778c;
+  font-size: 13px;
+}
+
+.health-row {
+  display: grid;
+  gap: 8px;
+  border-bottom: 1px solid #eef2f6;
+  padding: 12px 0;
+}
+
+.health-row:first-of-type {
+  padding-top: 0;
+}
+
+.health-row-header {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.status-chip {
+  border-radius: 999px;
+  padding: 4px 8px;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.status-pass {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.status-fail {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.status-unknown {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status-not_available {
+  background: #e5e7eb;
+  color: #374151;
+}
+
+.health-row p {
+  margin: 0;
+  color: #39475c;
+  font-size: 13px;
+}
+
+.health-meta {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+}
+
+.health-meta dt {
+  color: #6b778c;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.health-meta dd {
+  margin: -4px 0 4px;
+  color: #273244;
+  font-size: 13px;
+  overflow-wrap: anywhere;
 }
 
 .wiki-content {
@@ -408,7 +487,8 @@ select {
   }
 
   .source-row,
-  .dimension-row {
+  .dimension-row,
+  .health-row-header {
     grid-template-columns: 1fr;
   }
 }

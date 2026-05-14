@@ -8,6 +8,7 @@
 - `openspec/changes/personal-finance-multi-agent-system/`：OpenSpec proposal、design、tasks 與需求規格。
 - `golden_samples/`：群聯公開來源 proxy golden sample。
 - `TAICA_AIASE2026-main/final_project_資訊整理.md`：課程 final project 要求整理。
+- `docs/statementdog-feature-benchmark.md`：財報狗個股分析與股票健診功能拆解，作為後續 AI 統整報告 benchmark。
 - `backend/`：Flask API 與 deterministic multi-agent pipeline。
 - `frontend/`：Vue 研究工作台。
 - `data/`：本機 source / price / evaluation fixtures。

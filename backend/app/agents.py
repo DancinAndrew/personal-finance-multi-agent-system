@@ -202,6 +202,44 @@ class FundamentalAgent:
         )
 
 
+class HealthCheckAgent:
+    """Summarize conservative StatementDog-style health checks."""
+
+    def run(
+        self,
+        run_id: str,
+        checks: list[dict[str, Any]],
+    ) -> AgentResult:
+        source_ids = sorted({source_id for check in checks for source_id in check["source_ids"]})
+
+        def work() -> tuple[str, dict[str, Any]]:
+            summary = {
+                "total": len(checks),
+                "pass": _count_status(checks, "pass"),
+                "fail": _count_status(checks, "fail"),
+                "unknown": _count_status(checks, "unknown"),
+                "not_available": _count_status(checks, "not_available"),
+                "data_policy": "public_fixture_only",
+                "major_gaps": _major_health_gaps(checks),
+            }
+            return (
+                "完成 7 種股票健診框架，"
+                f"{summary['pass']} pass、{summary['fail']} fail、"
+                f"{summary['unknown']} unknown、{summary['not_available']} not_available；"
+                f"主要缺口為{'、'.join(summary['major_gaps'])}。",
+                {"summary": summary, "checks": checks},
+            )
+
+        return timed_step(
+            agent="health_check_agent",
+            run_id=run_id,
+            input_summary="使用 public fixture 將財報狗式七種股票健診轉成保守狀態與資料缺口。",
+            source_ids=source_ids,
+            confidence=0.78,
+            work=work,
+        )
+
+
 class RiskAgent:
     """Generate risks and opposing views."""
 
@@ -239,6 +277,7 @@ class ReportGenerator:
         target: dict[str, Any],
         narrative: dict[str, Any],
         fundamentals: dict[str, Any],
+        health_checks: dict[str, Any],
         risks: dict[str, Any],
         price_note: str,
     ) -> AgentResult:
@@ -249,6 +288,7 @@ class ReportGenerator:
                 target=target,
                 thesis=narrative["thesis"],
                 scenarios=scenarios,
+                health_checks=health_checks,
                 risks=risks["risks"],
                 price_note=price_note,
             )
@@ -270,7 +310,7 @@ class ReportGenerator:
                 },
             ]
             return (
-                "產生一份偏中性偏多、含來源與風險邊界的研究輔助報告。",
+                "產生一份偏中性偏多、含股票健診摘要、來源與風險邊界的研究輔助報告。",
                 {"report_markdown": report, "claims": claims},
             )
 
@@ -293,33 +333,44 @@ class EvaluationAgent:
         report_markdown: str,
         rubric: dict[str, Any],
         provenance_count: int,
+        health_checks: dict[str, Any] | None = None,
     ) -> AgentResult:
         def work() -> tuple[str, dict[str, Any]]:
             hard_fail_hits = [
                 rule for rule in rubric["hard_fail_rules"] if _rule_is_hit(rule, report_markdown)
             ]
+            if _health_check_hallucination_is_hit(report_markdown):
+                hard_fail_hits.append("health_check_hallucination")
+            health_summary_missing = not _has_health_check_summary(report_markdown, health_checks)
             dimensions = [
                 {"id": "source_grounding", "name": "來源 grounding", "score": 4.5},
                 {"id": "valuation_rigor", "name": "財務與估值嚴謹度", "score": 4.4},
                 {"id": "industry_narrative", "name": "產業敘事品質", "score": 4.1},
                 {"id": "risk_coverage", "name": "風險與反方觀點", "score": 4.4},
+                {"id": "health_check_honesty", "name": "健診與資料缺口誠實度", "score": 4.3},
                 {"id": "user_usefulness", "name": "使用者可用性", "score": 4.5},
             ]
             total = round(sum(item["score"] for item in dimensions) / len(dimensions), 2)
+            if health_summary_missing:
+                total = min(total, 3.5)
             if hard_fail_hits:
                 total = min(total, 2.5)
             status = "passed" if total >= rubric["threshold"] and not hard_fail_hits else "needs_revision"
+            notes = [
+                "有標示公開來源 proxy golden sample，不宣稱完整券商研報。",
+                f"已有 {provenance_count} 筆 wiki provenance 可追溯重要 claim。",
+                "股票健診採 public fixture 保守輸出，缺資料時標示 unknown / not_available。",
+                "仍需後續補正式 Q1 財報、現金流、股利、籌碼與長期估值區間。",
+            ]
+            if health_summary_missing:
+                notes.append("報告缺少完整股票健診摘要或未呈現七種健診，需補強。")
             payload = {
                 "total_score": total,
                 "threshold": rubric["threshold"],
                 "status": status,
                 "dimensions": dimensions,
                 "hard_fail_hits": hard_fail_hits,
-                "notes": [
-                    "有標示公開來源 proxy golden sample，不宣稱完整券商研報。",
-                    f"已有 {provenance_count} 筆 wiki provenance 可追溯重要 claim。",
-                    "仍需後續補正式 Q1 財報、現金流與庫存細節。",
-                ],
+                "notes": notes,
             }
             return (f"Evaluation score {total} / 5，狀態：{status}。", payload)
 
@@ -339,6 +390,7 @@ def _build_report(
     target: dict[str, Any],
     thesis: list[str],
     scenarios: list[dict[str, Any]],
+    health_checks: dict[str, Any],
     risks: list[str],
     price_note: str,
 ) -> str:
@@ -348,6 +400,8 @@ def _build_report(
         for item in scenarios
     )
     thesis_rows = "\n".join(f"- {item}" for item in thesis)
+    health_rows = _build_health_check_rows(health_checks["checks"])
+    health_gaps = "、".join(health_checks["summary"]["major_gaps"])
     risk_rows = "\n".join(f"- {item}" for item in risks)
     return f"""# {target_display_name}研究輔助報告
 
@@ -369,6 +423,16 @@ def _build_report(
 |---|---:|---:|---|---|
 {scenario_rows}
 
+## 股票健診摘要
+
+本段是 public fixture / public_fixture_only 的保守框架化輸出，不是財報狗登入或付費資料結果。`unknown` 代表資料不足，`not_available` 代表目前 MVP 沒有資料入口或權限。
+
+| 健診 | 狀態 | 保守解讀 | 主要缺口 | Sources |
+|---|---|---|---|---|
+{health_rows}
+
+主要缺口：{health_gaps}。
+
 ## 反方與風險
 
 {risk_rows}
@@ -389,6 +453,68 @@ def _target_display_name(target: dict[str, Any]) -> str:
     if ticker and ticker not in name:
         return f"{name}（{ticker}）"
     return name
+
+
+def _count_status(checks: list[dict[str, Any]], status: str) -> int:
+    return sum(1 for check in checks if check["status"] == status)
+
+
+def _major_health_gaps(checks: list[dict[str, Any]]) -> list[str]:
+    gap_keywords = [
+        ("現金流", "現金流"),
+        ("股利", "股利"),
+        ("殖利率", "股利"),
+        ("籌碼", "籌碼"),
+        ("董監", "籌碼"),
+        ("P/B", "P/B"),
+        ("F-score", "F-score"),
+        ("P/E", "長期估值區間"),
+        ("估值", "長期估值區間"),
+    ]
+    gaps: list[str] = []
+    for check in checks:
+        for missing in check["missing_data"]:
+            label = next((value for needle, value in gap_keywords if needle in missing), missing)
+            if label not in gaps:
+                gaps.append(label)
+    return gaps[:5]
+
+
+def _build_health_check_rows(checks: list[dict[str, Any]]) -> str:
+    rows = []
+    for check in checks:
+        sources = ", ".join(check["source_ids"]) if check["source_ids"] else "無直接來源"
+        missing = "、".join(check["missing_data"][:3])
+        rows.append(
+            f"| {check['name']} | {check['status']} | {check['report_takeaway']} | {missing} | {sources} |"
+        )
+    return "\n".join(rows)
+
+
+def _has_health_check_summary(
+    report_markdown: str,
+    health_checks: dict[str, Any] | None,
+) -> bool:
+    if not health_checks:
+        return False
+    if "股票健診摘要" not in report_markdown:
+        return False
+    checks = health_checks.get("checks", [])
+    if len(checks) != 7:
+        return False
+    return all(check["name"] in report_markdown for check in checks)
+
+
+def _health_check_hallucination_is_hit(report_markdown: str) -> bool:
+    risky_phrases = [
+        "已使用財報狗付費資料",
+        "已使用財報狗登入資料",
+        "籌碼健診通過",
+        "not_available 通過",
+        "unknown 通過",
+        "完整驗證",
+    ]
+    return any(phrase in report_markdown for phrase in risky_phrases)
 
 
 def _rule_is_hit(rule: str, report_markdown: str) -> bool:

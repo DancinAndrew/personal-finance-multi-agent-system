@@ -50,6 +50,10 @@
         <span class="label">Status</span>
         <strong>{{ result.evaluation.status }}</strong>
       </div>
+      <div>
+        <span class="label">Health gaps</span>
+        <strong>{{ healthGapSummary }}</strong>
+      </div>
     </section>
 
     <section v-if="result" class="workspace-grid">
@@ -84,6 +88,7 @@
         <div class="tabs" role="tablist">
           <button :class="{ active: activeTab === 'step' }" type="button" @click="activeTab = 'step'">Step</button>
           <button :class="{ active: activeTab === 'sources' }" type="button" @click="activeTab = 'sources'">Sources</button>
+          <button :class="{ active: activeTab === 'health' }" type="button" @click="activeTab = 'health'">Health</button>
           <button :class="{ active: activeTab === 'wiki' }" type="button" @click="activeTab = 'wiki'">Wiki</button>
           <button :class="{ active: activeTab === 'eval' }" type="button" @click="activeTab = 'eval'">Eval</button>
         </div>
@@ -110,6 +115,26 @@
               <p>{{ source.reliability_note }}</p>
             </div>
             <a :href="source.url_or_path" target="_blank" rel="noreferrer">{{ source.source_type }}</a>
+          </article>
+        </section>
+
+        <section v-if="activeTab === 'health'" class="tab-body">
+          <h3>Health Check</h3>
+          <p class="tab-note">public fixture only · 缺資料時保留 unknown / not_available</p>
+          <article v-for="check in result.analysis.health_checks.checks" :key="check.id" class="health-row">
+            <div class="health-row-header">
+              <strong>{{ check.name }}</strong>
+              <span class="status-chip" :class="`status-${check.status}`">{{ check.status }}</span>
+            </div>
+            <p>{{ check.status_reason }}</p>
+            <dl class="health-meta">
+              <dt>Takeaway</dt>
+              <dd>{{ check.report_takeaway }}</dd>
+              <dt>Missing</dt>
+              <dd>{{ check.missing_data.join('、') }}</dd>
+              <dt>Sources</dt>
+              <dd>{{ formatSourceIds(check.source_ids) }}</dd>
+            </dl>
           </article>
         </section>
 
@@ -169,6 +194,12 @@ const selectedWikiContent = computed(() => {
   return result.value.wiki.pages.find((page) => page.name === selectedWikiName.value)?.content || ''
 })
 
+const healthGapSummary = computed(() => {
+  const summary = result.value?.analysis?.health_checks?.summary
+  if (!summary) return 'N/A'
+  return `${summary.unknown} unknown / ${summary.not_available} N/A`
+})
+
 watch(result, (next) => {
   if (!next) return
   selectedStep.value = next.steps[0]
@@ -218,6 +249,10 @@ function formatPrice(value) {
     currency: 'TWD',
     maximumFractionDigits: 0
   }).format(value)
+}
+
+function formatSourceIds(sourceIds) {
+  return sourceIds.length ? sourceIds.join(', ') : '無直接來源'
 }
 
 function renderMarkdown(markdown) {

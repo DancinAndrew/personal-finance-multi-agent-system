@@ -17,13 +17,17 @@ The project needs a clear spec-first path for a multi-agent personal investment 
 - Set the initial evaluation pass threshold to 4.0 / 5.
 - Prefer an external brokerage research report as the primary golden sample, but start with a clearly labeled public-source proxy golden sample when the user does not have broker access.
 - Use "whether the AI SSD growth story supports Phison's current valuation" as the first research question.
-- Defer implementation design and task breakdown until the SPEC is reviewed.
+- Add StatementDog-style dashboard and stock health-check benchmarking as a product reference, while requiring the system to synthesize scattered indicators into an AI research report instead of leaving users to inspect dashboards manually.
+- Add a second-phase minimum slice for a conservative Health Check Agent that converts the seven StatementDog-style stock health-check perspectives into auditable `pass`, `fail`, `unknown`, or `not_available` outputs.
+- Require the Health Check Agent to mark missing, paywalled, login-gated, or unverified data as gaps instead of fabricating completed checks.
+- Keep the second-phase slice local and deterministic: no Supabase, real LLM, crawler, Exa API, live market data, StatementDog login, or paid data dependency.
 
 ## Capabilities
 
 ### New Capabilities
 
 - `personal-finance-multi-agent-system`: Defines the behavior of a decision-support research system for Taiwan equity investing, including routing, specialist agents, source grounding, evaluation, and safety boundaries.
+- `stock-health-check-agent`: Defines conservative stock health-check behavior for seven investment lenses, including explicit data-gap handling and integration into the report, trace, and evaluation workflow.
 
 ### Modified Capabilities
 

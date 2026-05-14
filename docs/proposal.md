@@ -13,10 +13,11 @@
 - 降低個股研究起步成本。
 - 把資料來源、代理推理、風險與評估放在同一個工作台。
 - 讓使用者學會判斷資料可信度，而不是只看單一新聞或目標價。
+- 把財報狗這類儀表板需要人工逐頁檢核的流程，轉成 AI 統整後的詳盡研究報告。
 
 ## Outcome
 
-使用者得到一份帶來源、估值情境、風險與評估分數的研究輔助報告，並能追溯每個重要主張來自哪些來源與哪個 agent step。
+使用者得到一份帶來源、估值情境、股票健診摘要、消息面 / 技術面 / 籌碼面統整、風險與評估分數的研究輔助報告，並能追溯每個重要主張來自哪些來源與哪個 agent step。
 
 ## MVP Scope
 
@@ -26,6 +27,7 @@
 - Deterministic agents。
 - LLMWiki-lite 研究知識層。
 - 群聯 proxy golden sample。
+- 財報狗功能 benchmark 拆解文件：`docs/statementdog-feature-benchmark.md`。
 
 ## Out of Scope
 

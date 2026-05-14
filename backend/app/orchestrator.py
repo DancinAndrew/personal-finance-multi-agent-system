@@ -8,6 +8,7 @@ from typing import Any
 from .agents import (
     EvaluationAgent,
     FundamentalAgent,
+    HealthCheckAgent,
     IntentRouter,
     NewsSectorAgent,
     ReportGenerator,
@@ -26,6 +27,7 @@ class ResearchOrchestrator:
         self.source_retrieval = SourceRetrieval()
         self.news_sector_agent = NewsSectorAgent()
         self.fundamental_agent = FundamentalAgent()
+        self.health_check_agent = HealthCheckAgent()
         self.risk_agent = RiskAgent()
         self.report_generator = ReportGenerator()
         self.evaluation_agent = EvaluationAgent()
@@ -54,6 +56,7 @@ class ResearchOrchestrator:
         wiki_pages = self.store.load_wiki_pages()
         provenance = self.store.load_provenance()
         rubric = self.store.load_rubric()
+        health_check_fixture = self.store.load_health_checks()
 
         steps: list[dict[str, Any]] = []
 
@@ -65,6 +68,8 @@ class ResearchOrchestrator:
         steps.append(narrative.step)
         fundamentals = self.fundamental_agent.run(run_id, price, price_date)
         steps.append(fundamentals.step)
+        health_checks = self.health_check_agent.run(run_id, health_check_fixture)
+        steps.append(health_checks.step)
         risks = self.risk_agent.run(run_id)
         steps.append(risks.step)
         report = self.report_generator.run(
@@ -73,6 +78,7 @@ class ResearchOrchestrator:
             target,
             narrative.payload,
             fundamentals.payload,
+            health_checks.payload,
             risks.payload,
             price_note,
         )
@@ -82,6 +88,7 @@ class ResearchOrchestrator:
             report.payload["report_markdown"],
             rubric,
             len(provenance),
+            health_checks.payload,
         )
         steps.append(evaluation.step)
 
@@ -113,6 +120,7 @@ class ResearchOrchestrator:
                 "retrieval": retrieval.payload,
                 "narrative": narrative.payload,
                 "fundamentals": fundamentals.payload,
+                "health_checks": health_checks.payload,
                 "risks": risks.payload,
             },
             "report": report.payload,

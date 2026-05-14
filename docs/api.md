@@ -29,6 +29,9 @@ Response includes:
 - `report`
 - `evaluation`
 
+`analysis.health_checks` uses the conservative public fixture policy. It does
+not represent StatementDog login-gated or paid data.
+
 ## POST /api/research-runs
 
 用途：建立 deterministic research run。
@@ -66,6 +69,44 @@ Request:
 ## GET /api/research-runs/{run_id}/wiki
 
 用途：取得 LLMWiki-lite pages 與 provenance。
+
+## Health Check Payload
+
+Health Check Agent 會在完整 run response 的 `analysis.health_checks` 回傳股票健診摘要：
+
+```json
+{
+  "summary": {
+    "total": 7,
+    "pass": 0,
+    "fail": 0,
+    "unknown": 6,
+    "not_available": 1,
+    "data_policy": "public_fixture_only",
+    "major_gaps": ["現金流", "股利", "籌碼", "P/B", "F-score"]
+  },
+  "checks": [
+    {
+      "id": "growth_stock",
+      "name": "成長股健診",
+      "status": "unknown",
+      "status_reason": "公開來源提供營收與 EPS 線索，但缺完整成長檢核序列。",
+      "criteria": [],
+      "source_ids": ["S1", "S2", "S3"],
+      "missing_data": ["近三個月月營收 YoY 序列"],
+      "report_takeaway": "不能完整判定成長股健診通過。",
+      "data_policy": "public_fixture_only"
+    }
+  ]
+}
+```
+
+Status enum:
+
+- `pass`：現有 fixture 足以支持通過。
+- `fail`：現有 fixture 足以支持未通過。
+- `unknown`：資料可能可補，但目前不足以判斷。
+- `not_available`：需要登入、付費、外部資料源，或第一版尚未納入。
 
 ## Error Handling
 

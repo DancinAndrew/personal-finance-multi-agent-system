@@ -1,0 +1,205 @@
+[
+  {
+    "id": "landmine_risk",
+    "name": "排除地雷股健診",
+    "status": "unknown",
+    "status_reason": "目前公開 fixture 尚未包含近五年自由現金流、營業現金流對淨利比、應收帳款週轉天數與存貨週轉天數，不能判定地雷股風險是否通過。",
+    "criteria": [
+      {
+        "id": "fcf_positive_three_of_five_years",
+        "label": "自由現金流近五年是否有三年大於 0",
+        "status": "unknown",
+        "source_ids": [],
+        "missing_data": ["近五年自由現金流"]
+      },
+      {
+        "id": "ocf_to_net_income_three_of_five_years",
+        "label": "營業現金流對淨利比近五年是否有三年大於 100%",
+        "status": "unknown",
+        "source_ids": [],
+        "missing_data": ["近五年營業現金流", "近五年淨利"]
+      },
+      {
+        "id": "receivable_inventory_turnover_days",
+        "label": "應收帳款與存貨週轉天數是否未惡化",
+        "status": "unknown",
+        "source_ids": [],
+        "missing_data": ["應收帳款週轉天數", "存貨週轉天數"]
+      }
+    ],
+    "source_ids": [],
+    "missing_data": ["近五年自由現金流", "營業現金流對淨利比", "應收帳款週轉天數", "存貨週轉天數"],
+    "report_takeaway": "目前不能判定排除地雷股健診是否通過，後續需補現金流與週轉天數資料。",
+    "data_policy": "public_fixture_only"
+  },
+  {
+    "id": "dividend_income",
+    "name": "定存股健診",
+    "status": "unknown",
+    "status_reason": "目前公開 fixture 尚未包含近一年殖利率、五年平均殖利率、連續配息與股息發放率，不能判定是否適合定存股框架。",
+    "criteria": [
+      {
+        "id": "dividend_yield_above_six_percent",
+        "label": "近一年與近五年平均股息殖利率是否大於 6%",
+        "status": "unknown",
+        "source_ids": [],
+        "missing_data": ["近一年股息殖利率", "近五年平均殖利率"]
+      },
+      {
+        "id": "consistent_dividend_and_payout",
+        "label": "連續五年發股息且股息發放率符合門檻",
+        "status": "unknown",
+        "source_ids": [],
+        "missing_data": ["連續配息紀錄", "五年股息發放率"]
+      }
+    ],
+    "source_ids": [],
+    "missing_data": ["近一年殖利率", "五年平均殖利率", "連續配息紀錄", "股息發放率"],
+    "report_takeaway": "目前不能把群聯歸類為定存股，因為配息穩定度與殖利率資料尚未納入 fixture。",
+    "data_policy": "public_fixture_only"
+  },
+  {
+    "id": "growth_stock",
+    "name": "成長股健診",
+    "status": "unknown",
+    "status_reason": "S1、S2、S3 提供 2026 年 4 月營收與 Q1 EPS 轉強線索，但缺完整近三個月月營收 YoY、毛利、營業利益、稅前與稅後淨利年增序列。",
+    "criteria": [
+      {
+        "id": "monthly_revenue_yoy_three_months_positive",
+        "label": "月營收 YoY 連續三個月大於 0",
+        "status": "unknown",
+        "source_ids": ["S1", "S2"],
+        "missing_data": ["近三個月月營收 YoY 序列"]
+      },
+      {
+        "id": "quarterly_profit_growth_positive",
+        "label": "近一季毛利、營業利益、稅前與稅後淨利年增率大於 0",
+        "status": "unknown",
+        "source_ids": ["S3"],
+        "missing_data": ["近一季毛利年增率", "近一季營業利益年增率", "近一季稅前淨利年增率", "近一季稅後淨利年增率"]
+      }
+    ],
+    "source_ids": ["S1", "S2", "S3"],
+    "missing_data": ["近三個月月營收 YoY 序列", "近一季毛利年增率", "近一季營業利益年增率", "近一季稅前淨利年增率", "近一季稅後淨利年增率"],
+    "report_takeaway": "目前只能說成長題材有營收與 EPS 線索，不能完整判定成長股健診通過。",
+    "data_policy": "public_fixture_only"
+  },
+  {
+    "id": "value_stock",
+    "name": "便宜股健診",
+    "status": "unknown",
+    "status_reason": "目前已有示範股價與 2026 EPS 情境可計算 Forward P/E，但缺五年 P/E percentile、P/B、殖利率與市場排名，不能判定便宜股健診。",
+    "criteria": [
+      {
+        "id": "pe_history_and_market_percentile",
+        "label": "本益比是否位於五年低檔且低於市場多數公司",
+        "status": "unknown",
+        "source_ids": ["S4", "S5"],
+        "missing_data": ["五年 P/E 區間", "市場 P/E 排名"]
+      },
+      {
+        "id": "pb_and_yield_value_checks",
+        "label": "P/B 與殖利率是否支持便宜股判斷",
+        "status": "unknown",
+        "source_ids": [],
+        "missing_data": ["P/B", "五年 P/B 區間", "近一年殖利率", "五年平均殖利率"]
+      }
+    ],
+    "source_ids": ["S4", "S5"],
+    "missing_data": ["五年 P/E percentile", "P/B", "殖利率", "市場排名"],
+    "report_takeaway": "目前只能做 Forward P/E 情境敏感度，不能判定便宜股健診通過或未通過。",
+    "data_policy": "public_fixture_only"
+  },
+  {
+    "id": "chip_signal",
+    "name": "籌碼健診",
+    "status": "not_available",
+    "status_reason": "目前 MVP 未納入分點、大股東、董監持股、董監質押與股東人數資料；這些資料需要額外來源、登入或付費資料。",
+    "criteria": [
+      {
+        "id": "major_shareholder_ratio_rising",
+        "label": "持股超過 5000 張的大股東持股比重是否連續三個月上升",
+        "status": "not_available",
+        "source_ids": [],
+        "missing_data": ["大股東持股比重月資料"]
+      },
+      {
+        "id": "director_holding_not_declining",
+        "label": "董監持股最新數值是否較 12 個月前持平或上升",
+        "status": "not_available",
+        "source_ids": [],
+        "missing_data": ["董監持股資料"]
+      },
+      {
+        "id": "shareholder_count_falling",
+        "label": "總股東人數是否連續三個月下滑",
+        "status": "not_available",
+        "source_ids": [],
+        "missing_data": ["總股東人數月資料"]
+      }
+    ],
+    "source_ids": [],
+    "missing_data": ["分點籌碼", "大股東持股", "董監持股", "董監質押", "股東人數"],
+    "report_takeaway": "籌碼健診目前不可用，不能把籌碼面當作支持或反對 thesis 的依據。",
+    "data_policy": "public_fixture_only"
+  },
+  {
+    "id": "quality_stock",
+    "name": "績優股健診",
+    "status": "unknown",
+    "status_reason": "目前 fixture 尚未包含上市年限確認、自由現金流報酬率、三年營業利益與估值品質排名，不能判定績優股健診。",
+    "criteria": [
+      {
+        "id": "fcf_return_quality",
+        "label": "自由現金流報酬率與三年平均排名是否足夠優秀",
+        "status": "unknown",
+        "source_ids": [],
+        "missing_data": ["自由現金流報酬率", "三年平均自由現金流報酬率排名"]
+      },
+      {
+        "id": "operating_profit_and_value_quality",
+        "label": "三年營業利益與估值品質排名是否符合績優股條件",
+        "status": "unknown",
+        "source_ids": ["S4", "S5"],
+        "missing_data": ["三年營業利益", "P/B + P/E + 殖利率綜合排名"]
+      }
+    ],
+    "source_ids": ["S4", "S5"],
+    "missing_data": ["上市年限確認", "自由現金流報酬率", "三年營業利益", "估值品質排名"],
+    "report_takeaway": "目前不能判定績優股健診，後續需補長期獲利、現金流與估值品質排名。",
+    "data_policy": "public_fixture_only"
+  },
+  {
+    "id": "turnaround_stock",
+    "name": "轉機股健診",
+    "status": "unknown",
+    "status_reason": "目前 fixture 缺 P/B、Piotroski F-score 與低估值排名，且目前群聯 thesis 主要是 AI SSD 與 NAND 循環，不是低迷反轉題材。",
+    "criteria": [
+      {
+        "id": "pb_below_three",
+        "label": "P/B 是否小於 3 倍",
+        "status": "unknown",
+        "source_ids": [],
+        "missing_data": ["P/B"]
+      },
+      {
+        "id": "f_score_above_eight",
+        "label": "Piotroski F-score 是否在 8 分以上",
+        "status": "unknown",
+        "source_ids": [],
+        "missing_data": ["Piotroski F-score"]
+      },
+      {
+        "id": "pb_low_market_rank",
+        "label": "P/B 是否為台股中最低的前 50 名",
+        "status": "unknown",
+        "source_ids": [],
+        "missing_data": ["台股 P/B 排名"]
+      }
+    ],
+    "source_ids": [],
+    "missing_data": ["P/B", "Piotroski F-score", "台股 P/B 排名"],
+    "report_takeaway": "目前不能判定轉機股健診；群聯第一版研究重點仍是成長敘事與估值支撐，而非低估值轉機。",
+    "data_policy": "public_fixture_only"
+  }
+]

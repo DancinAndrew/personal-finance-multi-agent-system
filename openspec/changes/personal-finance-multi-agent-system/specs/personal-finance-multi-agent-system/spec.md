@@ -174,6 +174,77 @@ The system SHALL model different investment perspectives as separate agents so t
 - **WHEN** agents disagree
 - **THEN** the system surfaces the disagreement instead of forcing a single confident answer.
 
+### Requirement: System transforms dashboard-style indicators into synthesized AI research reports
+The system SHALL treat dashboard-style financial metrics as inputs and benchmarks, not as the final user experience.
+
+#### Scenario: User requests complete single-stock analysis
+- **WHEN** the user asks for an analysis of a Taiwan stock
+- **THEN** the system integrates news, fundamentals, growth, profitability, safety, valuation, technical, chip, and risk perspectives.
+- **AND** the output is a research report rather than scattered metrics that the user must interpret manually.
+
+#### Scenario: Dashboard indicators conflict
+- **WHEN** different perspectives conflict, such as revenue growth with expensive valuation, improving chip signals without confirmed earnings, or low valuation with deteriorating cash flow
+- **THEN** the system explicitly lists the conflict, possible explanations, missing sources, and the assumptions that most affect the conclusion.
+
+#### Scenario: Stock health-check data is unavailable
+- **WHEN** a health-check item requires data that is unavailable, paywalled, login-gated, or not verified from public sources
+- **THEN** the system marks the item as `unknown`, `not available`, or `needs source` instead of pretending the check was completed.
+
+#### Scenario: Report completeness is evaluated
+- **WHEN** the report generator completes a single-stock research report
+- **THEN** the evaluation agent checks whether it covers thesis, latest changes, stock health-check summary, fundamentals, growth quality, valuation, technical and chip signals, opposing views, data gaps, tracking indicators, sources, and confidence.
+
+### Requirement: System produces conservative stock health-check summaries
+The system SHALL convert the seven StatementDog-style stock health-check perspectives into auditable health-check outputs using only sources available to the current deterministic MVP.
+
+#### Scenario: Health-check output is produced
+- **WHEN** the default Phison research run is generated
+- **THEN** the run includes a `health_check_agent` trace step.
+- **AND** `analysis.health_checks.checks` contains exactly seven checks: landmine risk, dividend income, growth stock, value stock, chip signal, quality stock, and turnaround stock.
+- **AND** each check includes a stable ID, display name, status, status reason, criteria, source IDs, missing data, report takeaway, and data policy.
+
+#### Scenario: Health-check status is serialized
+- **WHEN** a health-check item is returned through the API or used in the report
+- **THEN** its status is one of `pass`, `fail`, `unknown`, or `not_available`.
+- **AND** the system uses `unknown` only when the data may be obtainable but is currently insufficient.
+- **AND** the system uses `not_available` only when the data requires login, paid access, an external data source, or a capability outside the current MVP boundary.
+
+#### Scenario: Current public fixtures are insufficient for a check
+- **WHEN** the available public fixture does not contain enough data to determine whether a health check passes or fails
+- **THEN** the system marks the check as `unknown`.
+- **AND** the system lists the missing data needed to make the check decision.
+- **AND** the system does not infer a bullish, bearish, pass, or fail conclusion from incomplete data.
+
+#### Scenario: Chip data requires unavailable sources
+- **WHEN** chip-related checks require broker trading, major shareholder, director holding, pledged share, or shareholder-count data that is not present in the local fixture
+- **THEN** the system marks the chip signal check as `not_available`.
+- **AND** the system explains that the current MVP does not include the required source or permission.
+
+#### Scenario: Partial growth evidence exists
+- **WHEN** the fixture contains revenue or EPS evidence related to growth but lacks the full StatementDog-style growth-check criteria
+- **THEN** the system may attach the relevant source IDs to the growth stock check.
+- **AND** the system still marks the check as `unknown` unless all required criteria can be evaluated.
+
+#### Scenario: Health-check summary is added to the report
+- **WHEN** the report generator creates the research report
+- **THEN** the report includes a stock health-check summary with all seven check names, statuses, conservative takeaways, and key missing data.
+- **AND** the report clearly states that the health-check section is based on local public fixtures, not StatementDog login-gated or paid data.
+
+#### Scenario: Health-check output is shown in the web app
+- **WHEN** the web application displays a completed run
+- **THEN** it provides a Health view that shows each health-check status, reason, missing data, and source IDs.
+- **AND** `unknown` and `not_available` are visually distinguishable from `pass` and `fail`.
+
+#### Scenario: Health-check claims are evaluated
+- **WHEN** the evaluation agent reviews a report that includes health-check content
+- **THEN** it checks whether all seven checks are present and whether missing data is explicitly represented.
+- **AND** it lowers the score or marks the report as needing revision when the health-check summary is missing or incomplete.
+
+#### Scenario: Health-check hallucination is detected
+- **WHEN** the report claims that `unknown` or `not_available` checks passed, failed, or were fully verified
+- **THEN** the evaluation agent treats that as a hard failure.
+- **AND** the evaluation agent also treats it as a hard failure when the report claims to use StatementDog paid, login-gated, or unavailable data that is not present in the fixture.
+
 ### Requirement: System uses traceable data sources
 The system SHALL attach source references to claims that come from retrieved documents or external data.
 

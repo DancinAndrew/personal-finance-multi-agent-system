@@ -176,3 +176,160 @@
 - MVP 可在本機穩定展示。
 - 報告分數達到或超過 4.0 / 5。
 - 若分數未達 4.0 / 5，系統能說明缺口與需要補的資料。
+
+## 11. 後續：財報狗 benchmark 與 AI 統整報告升級
+
+- [x] 建立 `docs/statementdog-feature-benchmark.md`，拆解財報狗個股頁與股票健診功能。
+- [x] 在 OpenSpec proposal 補上第二階段最小切片：Health Check Agent。
+- [x] 在 OpenSpec design 補上 Health Check Agent 的資料策略、狀態語意、fixture schema、pipeline 位置、response contract、報告、前端與 evaluation 設計。
+- [x] 在 OpenSpec spec 補上 Health Check Agent 的 `SHALL` requirements 與 scenarios。
+- [x] 在 OpenSpec tasks 補上 Health Check Agent 的可執行任務拆解。
+- [x] 執行 `openspec validate personal-finance-multi-agent-system --strict --no-interactive`，確認 OpenSpec 仍有效。
+
+### 11.1 Health Check Agent 實作前提
+
+- [x] 確認本切片只使用本機公開 fixture，不新增 mock pass / fail 數字。
+- [x] 確認本切片不接 Supabase、Exa、crawler、真實 LLM、即時行情、財報狗登入或付費資料。
+- [x] 確認 health-check 狀態 wire values 固定為 `pass`、`fail`、`unknown`、`not_available`。
+- [x] 確認 `unknown` 與 `not_available` 的差異會在文件、API、report、UI 中一致呈現。
+
+驗收標準：
+
+- 開始 coding 前，實作者不需要再決定資料策略或狀態 enum。
+- 若資料不足，預設行為是標缺口，不是猜測結論。
+
+### 11.2 Health Check Fixture
+
+- [x] 建立 `data/phison/health_check_fixture.json`。
+- [x] fixture 必須剛好包含 7 種 health checks：
+  - `landmine_risk`
+  - `dividend_income`
+  - `growth_stock`
+  - `value_stock`
+  - `chip_signal`
+  - `quality_stock`
+  - `turnaround_stock`
+- [x] 每筆 check 必須包含 `id`、`name`、`status`、`status_reason`、`criteria`、`source_ids`、`missing_data`、`report_takeaway`、`data_policy`。
+- [x] `growth_stock` 可引用營收與 Q1 EPS 相關來源作 partial evidence，但第一版仍標 `unknown`，不得標 `pass`。
+- [x] `chip_signal` 第一版標 `not_available`，原因必須說明籌碼資料需要額外資料源或登入 / 付費資料。
+- [x] 其他資料不足項目標 `unknown`，並列出缺少的財務或歷史資料。
+
+驗收標準：
+
+- fixture 可讓人一眼看出每項健診缺什麼資料。
+- fixture 不包含任何虛構財務數字、虛構 pass / fail 結論或未授權資料。
+
+### 11.3 Store 與資料驗證
+
+- [x] 在 file store 新增 health check fixture loader。
+- [x] loader 必須驗證 fixture 是 list 或有明確 top-level checks array。
+- [x] loader 或 agent 必須驗證每筆 check 的 status 在合法 enum 內。
+- [x] loader 或 agent 必須驗證 `source_ids` 引用的 ID 存在於 source catalog。
+- [x] 當 fixture 缺少必填欄位時，測試應失敗並回傳清楚錯誤。
+
+驗收標準：
+
+- 壞資料不會默默進入 report。
+- source ID 拼錯時會被測試抓到。
+
+### 11.4 Health Check Agent
+
+- [x] 新增 deterministic `HealthCheckAgent`。
+- [x] Agent input：`run_id`、health check fixture、source catalog、可選的 fundamentals payload。
+- [x] Agent output payload 必須包含 `summary` 與 `checks`。
+- [x] `summary` 必須包含 `total`、`pass`、`fail`、`unknown`、`not_available`、`data_policy`、`major_gaps`。
+- [x] Agent step 必須包含 `input_summary`、`output_summary`、`source_ids`、`confidence`、`latency_ms`、`cost_usd`。
+- [x] `output_summary` 必須說明 7 項檢核、各狀態數量與主要缺口。
+
+驗收標準：
+
+- 預設 run 中可以看見 `health_check_agent` step。
+- Health Check Agent 的輸出可以獨立被 UI、report、evaluation 使用。
+
+### 11.5 Orchestrator / API Contract
+
+- [x] 將 Health Check Agent 串在 Fundamental Agent 之後、Risk Agent 之前。
+- [x] default run 的 steps 數量由 7 變成 8。
+- [x] 完整 run response 新增 `analysis.health_checks.summary`。
+- [x] 完整 run response 新增 `analysis.health_checks.checks`。
+- [x] 不新增新的 API endpoint；沿用既有 `/api/demo/default-run` 與 `/api/research-runs` response。
+- [x] 更新 `docs/api.md`，記錄 `analysis.health_checks` 的 response shape 與資料限制。
+
+驗收標準：
+
+- 前端只需讀取現有 run payload 就能顯示 Health tab。
+- API 文件明確寫出 health check 不是財報狗付費資料結果。
+
+### 11.6 Report Generator
+
+- [x] 報告新增「股票健診摘要」段落。
+- [x] 段落必須列出七種健診、狀態、保守 takeaway、主要缺口。
+- [x] 報告必須註記 health check 來自本機公開 fixture，不是財報狗登入 / 付費資料。
+- [x] 報告不得把 `unknown` 或 `not_available` 改寫成通過、偏多、買進理由或完整驗證。
+- [x] 若 health check 資料不足，報告仍必須顯示缺口，而不是省略該段。
+
+驗收標準：
+
+- 使用者不需要打開財報狗多個頁面，也能看到系統知道哪些健診還不能判斷。
+- 報告的 health check 段落能支援後續補資料與再評估。
+
+### 11.7 Evaluation Agent
+
+- [x] rubric 新增或擴充 health-check completeness / data-gap honesty 的評分面向。
+- [x] 若報告缺少「股票健診摘要」，evaluation 應降分或標示 `needs_revision`。
+- [x] 若七種健診沒有全部出現，evaluation 應降分。
+- [x] 若報告宣稱已使用財報狗付費 / 登入資料，但 fixture 沒有該資料，evaluation 應 hard fail。
+- [x] 若報告把 `unknown` 或 `not_available` 說成已通過、已失敗或完整驗證，evaluation 應 hard fail。
+- [x] Evaluation notes 應說明目前主要缺口，例如現金流、股利、籌碼、P/B、F-score、歷史估值區間。
+
+驗收標準：
+
+- evaluation 不只評報告好不好看，也評它有沒有誠實承認資料不足。
+- 反幻覺規則能涵蓋 health check 的高風險錯誤。
+
+### 11.8 Frontend
+
+- [x] detail panel 新增 `Health` tab。
+- [x] Health tab 顯示七種健診的 status chip、reason、missing data、source IDs。
+- [x] `unknown` 與 `not_available` 的樣式必須和 `pass` / `fail` 明顯不同。
+- [x] summary band 可顯示 health gaps，例如 `6 unknown / 1 N/A`。
+- [x] desktop 與 mobile viewport 下，長文字不得溢出、重疊或擠壓主要操作。
+
+驗收標準：
+
+- demo 時可以直接點 Health tab 解釋「資料不足也是系統輸出」。
+- UI 不會讓使用者誤會 unknown 是通過。
+
+### 11.9 TDD 與驗證
+
+- [x] 先寫 RED tests，再實作 production code。
+- [x] 後端測試：file store 能讀取 health check fixture。
+- [x] 後端測試：fixture 剛好有 7 項，且 status enum 合法。
+- [x] 後端測試：source IDs 都存在於 source catalog。
+- [x] 後端測試：default run 包含 `health_check_agent`，steps 數量為 8。
+- [x] 後端測試：`analysis.health_checks.checks` 有 7 項。
+- [x] 後端測試：report 包含「股票健診摘要」與資料限制。
+- [x] 後端測試：report 不得宣稱使用財報狗付費 / 登入資料。
+- [x] 後端測試：evaluation 能抓出缺少 health check summary 的報告。
+- [x] Flask API 測試：default run endpoint 回傳 `analysis.health_checks`。
+- [x] 前端驗證：`npm run build` 成功。
+- [x] 瀏覽器驗證：desktop / mobile Health tab 可讀、可操作、不溢出。
+
+驗收標準：
+
+- 實作完成前，不把 tasks 勾選為完成。
+- 測試能保護 health check 的反幻覺邊界。
+
+### 11.10 第二階段後續，但不在本切片
+
+- [ ] 擴充 Fundamental Agent，覆蓋營收、獲利能力、安全性、成長力與現金流品質。
+- [ ] 新增 Valuation Agent，覆蓋 P/E、P/B、殖利率與情境估值。
+- [ ] 新增 Chip Agent，覆蓋分點、董監持股、董監質押、大股東持股與股東人數。
+- [ ] 新增 Technical Agent，補足財報狗較少覆蓋的價格、量能、動能與技術面。
+- [ ] 新增 Synthesis Agent，將消息面、基本面、技術面、籌碼面、估值面與風險面合成完整研究報告。
+- [ ] 擴充 Evaluation Agent，檢查報告是否涵蓋 thesis、最新變化、健診摘要、反方觀點、資料缺口、追蹤指標、來源與信心。
+
+驗收標準：
+
+- 使用者不需要逐頁閱讀財報儀表板，就能得到一份完整、有來源、有矛盾標記、有追蹤指標的研究報告。
+- 若某個健診或籌碼資料需要登入、付費或外部資料來源，系統必須標示資料缺口，不得假裝已完成檢核。
