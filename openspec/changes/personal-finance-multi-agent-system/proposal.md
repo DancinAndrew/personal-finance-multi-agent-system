@@ -21,6 +21,8 @@ The project needs a clear spec-first path for a multi-agent personal investment 
 - Add a second-phase minimum slice for a conservative Health Check Agent that converts the seven StatementDog-style stock health-check perspectives into auditable `pass`, `fail`, `unknown`, or `not_available` outputs.
 - Require the Health Check Agent to mark missing, paywalled, login-gated, or unverified data as gaps instead of fabricating completed checks.
 - Keep the second-phase slice local and deterministic: no Supabase, real LLM, crawler, Exa API, live market data, StatementDog login, or paid data dependency.
+- Add the next second-phase slice for a deeper Fundamental Agent that turns revenue, profitability, safety, growth, and cash-flow quality metrics into a structured financial snapshot with explicit source coverage and missing-data gaps.
+- Preserve the existing EPS / Forward P/E scenarios while separating them from broader fundamental quality analysis so valuation sensitivity does not pretend to cover full business quality.
 
 ## Capabilities
 
@@ -28,6 +30,7 @@ The project needs a clear spec-first path for a multi-agent personal investment 
 
 - `personal-finance-multi-agent-system`: Defines the behavior of a decision-support research system for Taiwan equity investing, including routing, specialist agents, source grounding, evaluation, and safety boundaries.
 - `stock-health-check-agent`: Defines conservative stock health-check behavior for seven investment lenses, including explicit data-gap handling and integration into the report, trace, and evaluation workflow.
+- `fundamental-analysis-agent`: Defines deterministic fundamental-analysis behavior for revenue, profitability, safety, growth, and cash-flow quality, including metric coverage status and report integration.
 
 ### Modified Capabilities
 

@@ -364,6 +364,161 @@ Evaluation Agent 必須新增 health-check 完整性與資料誠實度檢查：
 - 若報告宣稱使用財報狗付費 / 登入資料，但 fixture 沒有該來源，應觸發 hard fail。
 - 若 health check 明確列出缺口與補資料方向，應提高 user usefulness 與 risk coverage 的評分理由。
 
+### 6.2 第二階段最小切片：Fundamental Agent 擴充
+
+Fundamental Agent 擴充是 Health Check Agent 之後的下一個切片。現有 Fundamental Agent 主要做 EPS 情境與 Forward P/E，容易讓使用者以為「有估值」就等於「完整基本面」。擴充後的 Fundamental Agent 必須把營收、獲利能力、安全性、成長力與現金流品質拆開，並清楚標示哪些資料已取得、哪些只是 partial evidence、哪些仍缺資料。
+
+#### 6.2.1 範圍與非範圍
+
+| 類別 | 決策 |
+|---|---|
+| 第一版資料策略 | 仍使用本機 public fixture，不接財報狗登入 / 付費資料、不接 MOPS crawler、不接 Supabase |
+| 核心目標 | 將基本面從單一 EPS / P/E 情境擴充成五大面向的 financial snapshot |
+| 仍保留 | 既有 `valuation_scenarios` 必須保留，避免破壞 report、tests 與 UI |
+| 新增輸出 | `analysis.fundamentals.summary`、`analysis.fundamentals.categories`、`analysis.fundamentals.key_findings`、`analysis.fundamentals.data_gaps` |
+| 不允許行為 | 不得用不存在的完整財報數字填空；不得把新聞轉述當成 audited financial statement；不得把單季 EPS 年化當成正式全年預估 |
+| 延後事項 | 自動抓公開資訊觀測站、完整三表歷史資料、同業排名、正式 margin / cash-flow database |
+
+#### 6.2.2 Metric coverage status
+
+Fundamental metrics 必須使用固定 coverage status，而不是用自然語言自由描述：
+
+| Wire value | 中文顯示 | 語意 |
+|---|---|---|
+| `available` | 已取得 | fixture 有足夠資料可呈現該 metric，且有 source IDs |
+| `partial` | 部分取得 | 有方向性線索或單期資料，但不足以完成趨勢、同比、品質或完整判讀 |
+| `missing` | 缺資料 | 理論上可由公開財報或人工整理補齊，但目前 fixture 沒有 |
+| `not_available` | 目前不可用 | 需要付費、登入、外部資料源，或第一版產品邊界外 |
+
+此 status 和 Health Check 的 `pass / fail / unknown / not_available` 不同：Fundamental Agent 評估的是「資料覆蓋程度與財務解讀」，不是健診是否通過。
+
+#### 6.2.3 Fundamental fixture schema
+
+下一步實作應新增 `data/phison/fundamental_metrics_fixture.json`。建議 schema：
+
+```json
+{
+  "as_of_date": "2026-05-10",
+  "data_policy": "public_fixture_only",
+  "categories": [
+    {
+      "id": "revenue",
+      "name": "營收",
+      "coverage_status": "partial",
+      "category_takeaway": "已取得 2026 年 4 月營收與新聞轉述的月增 / 年增線索，但尚未建立完整近 12 個月序列。",
+      "metrics": [
+        {
+          "id": "monthly_revenue_latest",
+          "label": "最新月營收",
+          "period": "2026-04",
+          "value": 202.07,
+          "unit": "TWD_BN",
+          "coverage_status": "available",
+          "source_ids": ["S1", "S2"],
+          "interpretation": "4 月營收可作為 AI SSD / NAND 循環敘事的營收端線索。",
+          "missing_data": []
+        }
+      ],
+      "missing_data": ["近 12 個月營收序列", "累計營收 YoY"]
+    }
+  ]
+}
+```
+
+欄位規則：
+
+- `categories` 必須剛好覆蓋五大面向：`revenue`、`profitability`、`safety`、`growth`、`cash_flow_quality`。
+- 每個 category 必須有 `coverage_status`、`category_takeaway`、`metrics`、`missing_data`。
+- 每個 metric 必須有 `id`、`label`、`period`、`value`、`unit`、`coverage_status`、`source_ids`、`interpretation`、`missing_data`。
+- 若數值未知，`value` 可為 `null`，但 `coverage_status` 必須是 `partial`、`missing` 或 `not_available`，且 `missing_data` 不可為空。
+- `source_ids` 只能引用 source catalog 中已存在的 ID。
+- `unit` 必須使用穩定值，例如 `TWD_BN`、`TWD`、`percent`、`days`、`ratio`、`text`、`not_applicable`。
+
+#### 6.2.4 五大面向的第一版資料覆蓋
+
+| Category ID | 面向 | 第一版 expected coverage | 必要 metrics / gaps |
+|---|---|---|---|
+| `revenue` | 營收 | `partial` | 可用 S1 / S2 呈現 2026-04 月營收與新聞線索；缺近 12 個月序列、累計營收 YoY、產品別營收 |
+| `profitability` | 獲利能力 | `partial` | 可用 S3 呈現 Q1 EPS；缺毛利率、營業利益率、淨利率、ROE / ROA |
+| `safety` | 安全性 | `missing` | 缺負債比、流動比、速動比、利息保障倍數與金融借款 |
+| `growth` | 成長力 | `partial` | 可用 S1 / S2 / S3 提供營收與 EPS 成長線索；缺完整月營收 YoY 序列、毛利 / 營業利益 / 淨利成長率 |
+| `cash_flow_quality` | 現金流品質 | `missing` | 缺營業現金流、自由現金流、OCF / net income、存貨與應收帳款週轉 |
+
+第一版可以讓 `revenue`、`profitability`、`growth` 呈現 partial evidence，但 `safety` 與 `cash_flow_quality` 應保守標為 `missing`，除非新增正式來源。
+
+#### 6.2.5 Fundamental Agent output contract
+
+擴充後的 `analysis.fundamentals` 應保留現有 `valuation_scenarios`，並新增：
+
+```json
+{
+  "analysis": {
+    "fundamentals": {
+      "valuation_scenarios": [],
+      "summary": {
+        "categories_total": 5,
+        "available": 0,
+        "partial": 3,
+        "missing": 2,
+        "not_available": 0,
+        "data_policy": "public_fixture_only",
+        "major_gaps": ["毛利率", "現金流", "負債比", "週轉天數"]
+      },
+      "categories": [],
+      "key_findings": [
+        "營收與 EPS 有正向線索，但現金流與資產負債表尚未納入。"
+      ],
+      "data_gaps": []
+    }
+  }
+}
+```
+
+Agent step 的 `output_summary` 不應只說「建立 EPS 情境」，而應說明五大面向的覆蓋度，例如：「建立 EPS/P/E 情境並整理五大基本面面向：3 partial、2 missing；主要缺口為毛利率、現金流、負債比與週轉天數。」
+
+#### 6.2.6 Health Check dependency
+
+Health Check Agent 應可讀取擴充後的 fundamentals payload：
+
+- `growth_stock` 可引用 `fundamentals.categories.growth` 的 partial evidence。
+- `landmine_risk` 可引用 `cash_flow_quality` 的 missing gaps。
+- `value_stock` 仍以 Valuation Agent 未完成為資料缺口，不應把 Forward P/E 情境當完整便宜股判定。
+- Health Check 不應直接重新計算 fundamental metrics；它只消費 Fundamental Agent 的輸出與 fixture。
+
+#### 6.2.7 Report integration
+
+Report Generator 必須新增或擴充「基本面拆解」段落，至少包含：
+
+- 五大面向的 coverage table。
+- 每個面向的 takeaway。
+- 已有資料與缺口分開列出。
+- 將 EPS / Forward P/E 情境明確標示為估值敏感度，不等同完整基本面品質。
+
+報告不得：
+
+- 因為 Q1 EPS 強就宣稱獲利能力全面改善。
+- 因為營收強就宣稱現金流品質改善。
+- 因為 Forward P/E 看起來較低就宣稱公司便宜。
+- 把缺資料的 `safety` 或 `cash_flow_quality` 寫成已確認健康。
+
+#### 6.2.8 Frontend integration
+
+前端應新增或擴充 `Fundamentals` view：
+
+- 可在 detail panel 新增 `Fundamentals` tab，或在既有 report 旁新增 compact panel。
+- 顯示五大 categories、coverage status、主要 metrics、source IDs、missing data。
+- `partial` / `missing` 必須視覺上和 `available` 不同。
+- 不應把 valuation scenarios 和 fundamentals categories 混成同一張表；兩者可在同一 tab 但要分區。
+
+#### 6.2.9 Evaluation integration
+
+Evaluation Agent 必須新增 fundamental coverage 檢查：
+
+- 若 report 缺少五大面向的基本面拆解，應降分或標 `needs_revision`。
+- 若 report 把 partial / missing metric 寫成已確認，應 hard fail。
+- 若 report 使用 EPS 年化卻沒有說明限制，應 hard fail 或至少重大扣分。
+- 若 report 清楚列出營收、獲利、安全性、成長力、現金流品質與缺口，應提高 valuation rigor、risk coverage、user usefulness。
+
 ## 7. LLMWiki-lite 研究 Wiki 層
 
 LLMWiki-lite 是本專案的研究知識層。它不是取代 RAG，也不是完整 knowledge graph；它把已整理來源轉成可讀、可連結、可審計的 Markdown pages，讓 agent 不必每次從 raw documents 重新拼答案。

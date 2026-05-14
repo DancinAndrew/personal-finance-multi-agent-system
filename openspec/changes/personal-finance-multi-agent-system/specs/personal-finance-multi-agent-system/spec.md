@@ -245,6 +245,53 @@ The system SHALL convert the seven StatementDog-style stock health-check perspec
 - **THEN** the evaluation agent treats that as a hard failure.
 - **AND** the evaluation agent also treats it as a hard failure when the report claims to use StatementDog paid, login-gated, or unavailable data that is not present in the fixture.
 
+### Requirement: System expands fundamental analysis into a financial quality snapshot
+The system SHALL expand the Fundamental Agent beyond EPS and Forward P/E scenarios into a structured financial quality snapshot covering revenue, profitability, safety, growth, and cash-flow quality.
+
+#### Scenario: Fundamental snapshot is produced
+- **WHEN** the default Phison research run is generated
+- **THEN** `analysis.fundamentals` preserves the existing `valuation_scenarios`.
+- **AND** `analysis.fundamentals` also includes `summary`, `categories`, `key_findings`, and `data_gaps`.
+- **AND** `analysis.fundamentals.categories` contains exactly five categories: revenue, profitability, safety, growth, and cash-flow quality.
+
+#### Scenario: Fundamental metric coverage is serialized
+- **WHEN** a fundamental category or metric is returned through the API or used in the report
+- **THEN** its coverage status is one of `available`, `partial`, `missing`, or `not_available`.
+- **AND** the system uses `available` only when the fixture contains enough data and source IDs for that metric.
+- **AND** the system uses `partial` when there is directional evidence but not enough data for full trend or quality judgment.
+- **AND** the system uses `missing` when the data should be obtainable from public financial sources but is not yet in the fixture.
+- **AND** the system uses `not_available` only when the data requires unavailable external permissions, paid data, or a capability outside the current MVP boundary.
+
+#### Scenario: Revenue evidence exists
+- **WHEN** the fixture contains official or news-based monthly revenue evidence
+- **THEN** the revenue category may be marked `partial` or `available` depending on whether the required sequence is complete.
+- **AND** the system records source IDs, period, unit, interpretation, and missing trend data.
+
+#### Scenario: Profitability evidence is incomplete
+- **WHEN** the fixture contains EPS evidence but lacks gross margin, operating margin, net margin, ROE, or ROA
+- **THEN** the profitability category is marked `partial`.
+- **AND** the system does not claim broad profitability improvement from EPS alone.
+
+#### Scenario: Safety and cash-flow data are missing
+- **WHEN** the fixture lacks balance-sheet ratios, debt metrics, operating cash flow, free cash flow, OCF-to-net-income, inventory turnover, or receivable turnover
+- **THEN** the safety and cash-flow quality categories are marked `missing`.
+- **AND** the system lists the missing data needed for future evaluation.
+
+#### Scenario: Growth evidence is partial
+- **WHEN** the fixture contains revenue or EPS growth clues but lacks full monthly revenue YoY sequence and profit-growth metrics
+- **THEN** the growth category is marked `partial`.
+- **AND** the system explains which growth claims are source-backed and which remain unverified.
+
+#### Scenario: Fundamental report section is generated
+- **WHEN** the report generator creates the research report
+- **THEN** it includes a fundamental breakdown covering all five categories, their coverage statuses, source-backed takeaways, and data gaps.
+- **AND** it separates EPS / Forward P/E valuation sensitivity from broader business quality.
+
+#### Scenario: Fundamental overclaim is detected
+- **WHEN** the report claims that missing or partial metrics are fully verified
+- **THEN** the evaluation agent treats that as a hard failure or marks the report as needing revision.
+- **AND** the evaluation agent also penalizes reports that annualize Q1 EPS as a full-year forecast without warning.
+
 ### Requirement: System uses traceable data sources
 The system SHALL attach source references to claims that come from retrieved documents or external data.
 

@@ -322,7 +322,187 @@
 
 ### 11.10 第二階段後續，但不在本切片
 
-- [ ] 擴充 Fundamental Agent，覆蓋營收、獲利能力、安全性、成長力與現金流品質。
+- [x] 在 OpenSpec proposal 補上 Fundamental Agent 擴充方向：從 EPS / P/E 情境擴成五大基本面品質 snapshot。
+- [x] 在 OpenSpec design 補上 Fundamental Agent 擴充的資料策略、coverage status、fixture schema、五大面向、response contract、report、frontend 與 evaluation 設計。
+- [x] 在 OpenSpec spec 補上 Fundamental Agent 擴充的 `SHALL` requirements 與 scenarios。
+- [x] 在 OpenSpec tasks 補上 Fundamental Agent 擴充的可執行任務拆解。
+- [x] 執行 `openspec validate personal-finance-multi-agent-system --strict --no-interactive`，確認 OpenSpec 仍有效。
+
+### 12. Fundamental Agent 擴充
+
+> 本節是下一個實作切片；目前只完成 OpenSpec 文件，不代表已實作。
+
+### 12.1 Fundamental Agent 實作前提
+
+- [ ] 確認本切片只使用本機 public fixture，不接 MOPS crawler、財報狗登入 / 付費資料、Supabase、Exa、真實 LLM 或即時行情。
+- [ ] 確認既有 `valuation_scenarios` 必須保留，避免破壞既有 report、UI 與測試。
+- [ ] 確認 Fundamental Agent 的新目標是五大基本面面向，不再只輸出 EPS / Forward P/E。
+- [ ] 確認 coverage status 固定為 `available`、`partial`、`missing`、`not_available`。
+- [ ] 確認 partial / missing 不能被 report 寫成已完整驗證。
+
+驗收標準：
+
+- 實作者不需要再決定 Fundamental Agent 的資料策略、category set 或 status enum。
+- EPS / P/E 情境與基本面品質分析在資料契約中清楚分離。
+
+### 12.2 Fundamental Metrics Fixture
+
+- [ ] 建立 `data/phison/fundamental_metrics_fixture.json`。
+- [ ] fixture 必須包含 `as_of_date`、`data_policy`、`categories`。
+- [ ] `categories` 必須剛好包含五大面向：
+  - `revenue`
+  - `profitability`
+  - `safety`
+  - `growth`
+  - `cash_flow_quality`
+- [ ] 每個 category 必須包含 `id`、`name`、`coverage_status`、`category_takeaway`、`metrics`、`missing_data`。
+- [ ] 每個 metric 必須包含 `id`、`label`、`period`、`value`、`unit`、`coverage_status`、`source_ids`、`interpretation`、`missing_data`。
+- [ ] 若 `value` 為 `null`，則 `coverage_status` 不得為 `available`，且 `missing_data` 不得為空。
+- [ ] `source_ids` 必須引用已存在 source catalog ID。
+- [ ] `unit` 必須使用穩定值，例如 `TWD_BN`、`TWD`、`percent`、`days`、`ratio`、`text`、`not_applicable`。
+
+驗收標準：
+
+- fixture 能清楚區分已取得數字、部分線索與缺資料。
+- fixture 不包含虛構 margin、cash flow、balance sheet 或同業排名。
+
+### 12.3 第一版資料覆蓋策略
+
+- [ ] `revenue` 第一版標 `partial`，可引用 S1 / S2 呈現 2026-04 月營收與新聞線索。
+- [ ] `revenue` 必須列出缺口：近 12 個月營收序列、累計營收 YoY、產品別營收。
+- [ ] `profitability` 第一版標 `partial`，可引用 S3 呈現 Q1 EPS。
+- [ ] `profitability` 必須列出缺口：毛利率、營業利益率、淨利率、ROE / ROA。
+- [ ] `safety` 第一版標 `missing`，列出負債比、流動比、速動比、利息保障倍數與金融借款缺口。
+- [ ] `growth` 第一版標 `partial`，可引用 S1 / S2 / S3 作營收與 EPS 成長線索。
+- [ ] `growth` 必須列出缺口：完整月營收 YoY 序列、毛利 / 營業利益 / 淨利成長率。
+- [ ] `cash_flow_quality` 第一版標 `missing`，列出 OCF、FCF、OCF / net income、存貨與應收帳款週轉缺口。
+
+驗收標準：
+
+- 財務面向不會因為有 EPS 或營收新聞就被誤判為完整。
+- 報告可以誠實回答「我們知道什麼、還不知道什麼」。
+
+### 12.4 Store 與資料驗證
+
+- [ ] 在 file store 新增 fundamental metrics fixture loader。
+- [ ] loader 必須驗證 top-level schema 與五大 category 數量。
+- [ ] loader 或 agent 必須驗證 category / metric coverage status 合法。
+- [ ] loader 或 agent 必須驗證 `source_ids` 存在於 source catalog。
+- [ ] loader 或 agent 必須驗證 `value = null` 時不得標 `available`。
+- [ ] 當 category 缺少 required metrics 或 required fields 時，測試應失敗並回傳清楚錯誤。
+
+驗收標準：
+
+- 壞的 financial fixture 不會進入 report。
+- source 或 status 拼錯會被測試抓到。
+
+### 12.5 Fundamental Agent Output
+
+- [ ] 擴充 deterministic `FundamentalAgent`，保留既有 EPS / Forward P/E `valuation_scenarios`。
+- [ ] Agent input：`run_id`、price、price_date、fundamental metrics fixture、source catalog。
+- [ ] Agent output 必須包含 `valuation_scenarios`、`summary`、`categories`、`key_findings`、`data_gaps`。
+- [ ] `summary` 必須包含 `categories_total`、`available`、`partial`、`missing`、`not_available`、`data_policy`、`major_gaps`。
+- [ ] `key_findings` 必須用保守語氣說明營收 / EPS 線索與資料缺口。
+- [ ] `data_gaps` 必須彙整五大面向中最重要的缺口。
+- [ ] Agent step 的 `output_summary` 必須同時提到 EPS/P/E 情境與五大基本面 coverage。
+
+驗收標準：
+
+- `analysis.fundamentals.valuation_scenarios` 與既有前端 / report 相容。
+- 新增 fundamentals categories 後，Health Check Agent 可以消費這些資料缺口。
+
+### 12.6 Orchestrator / API Contract
+
+- [ ] Orchestrator 讀取 fundamental metrics fixture 並傳入 Fundamental Agent。
+- [ ] 完整 run response 的 `analysis.fundamentals` 新增 `summary`。
+- [ ] 完整 run response 的 `analysis.fundamentals` 新增 `categories`。
+- [ ] 完整 run response 的 `analysis.fundamentals` 新增 `key_findings`。
+- [ ] 完整 run response 的 `analysis.fundamentals` 新增 `data_gaps`。
+- [ ] 不新增新的 API endpoint；沿用既有 run response。
+- [ ] 更新 `docs/api.md`，記錄 fundamentals expanded payload 與資料限制。
+
+驗收標準：
+
+- 前端可以只靠現有 run payload 顯示 Fundamental tab。
+- API 文件明確寫出這不是完整財報資料庫，而是 public fixture financial snapshot。
+
+### 12.7 Report Generator
+
+- [ ] 報告新增或擴充「基本面拆解」段落。
+- [ ] 段落必須列出五大面向、coverage status、takeaway、主要 metrics、主要缺口。
+- [ ] 報告必須把 EPS / Forward P/E 情境標示為估值敏感度，不等同完整基本面品質。
+- [ ] 報告不得因 Q1 EPS 強就宣稱獲利能力全面改善。
+- [ ] 報告不得因營收強就宣稱現金流品質改善。
+- [ ] 報告不得因 Forward P/E 看起來較低就宣稱公司便宜。
+- [ ] `safety` 與 `cash_flow_quality` 若為 `missing`，必須在報告中保留缺口。
+
+驗收標準：
+
+- 使用者能看到「營收 / EPS 已有線索，但安全性與現金流仍缺資料」。
+- 報告不再把估值情境誤包裝成完整基本面研究。
+
+### 12.8 Health Check Agent Integration
+
+- [ ] Health Check Agent 可讀取擴充後的 fundamentals payload。
+- [ ] `growth_stock` 可引用 `fundamentals.categories.growth` 的 partial evidence。
+- [ ] `landmine_risk` 可引用 `cash_flow_quality` 的 missing gaps。
+- [ ] `value_stock` 不得把 Forward P/E 情境當成完整便宜股判定。
+- [ ] Health Check Agent 不重新計算 fundamental metrics，只消費 Fundamental Agent output 與 health check fixture。
+
+驗收標準：
+
+- Health Check 與 Fundamental Agent 的責任不重疊。
+- 股票健診的缺口和基本面資料缺口一致，不互相矛盾。
+
+### 12.9 Evaluation Agent
+
+- [ ] rubric 新增或擴充 fundamental coverage / overclaim guardrail。
+- [ ] 若 report 缺少五大面向基本面拆解，evaluation 應降分或標 `needs_revision`。
+- [ ] 若 report 把 partial / missing metric 寫成已完整驗證，evaluation 應 hard fail。
+- [ ] 若 report 將 Q1 EPS 無警語年化成全年正式預估，evaluation 應 hard fail 或重大扣分。
+- [ ] 若 report 清楚列出營收、獲利、安全性、成長力、現金流品質與缺口，evaluation 應提高 valuation rigor / risk coverage / user usefulness 的評分理由。
+
+驗收標準：
+
+- evaluation 能抓出「用 EPS 代替完整基本面」的錯誤。
+- evaluation 能獎勵誠實列缺口的報告。
+
+### 12.10 Frontend
+
+- [ ] detail panel 新增 `Fundamentals` tab，或在既有 detail panel 中新增 fundamentals view。
+- [ ] Fundamentals view 顯示五大 categories、coverage status、category takeaway、主要 metrics、source IDs、missing data。
+- [ ] `available`、`partial`、`missing`、`not_available` 的樣式必須可區分。
+- [ ] Valuation scenarios 與 fundamentals categories 可放在同一 tab，但必須分區，不得混成同一張表。
+- [ ] desktop 與 mobile viewport 下，長 metric 名稱、missing data 與 source IDs 不得溢出。
+
+驗收標準：
+
+- demo 時可以清楚解釋「基本面目前覆蓋了哪些資料、還缺哪些資料」。
+- UI 不會讓使用者誤會 partial / missing 是已完成分析。
+
+### 12.11 TDD 與驗證
+
+- [ ] 先寫 RED tests，再實作 production code。
+- [ ] 後端測試：file store 能讀取 fundamental metrics fixture。
+- [ ] 後端測試：fixture 剛好有五大 categories，且 coverage status 合法。
+- [ ] 後端測試：source IDs 都存在於 source catalog。
+- [ ] 後端測試：`value = null` 時不得標 `available`。
+- [ ] 後端測試：default run 保留 `valuation_scenarios`。
+- [ ] 後端測試：default run 包含 `analysis.fundamentals.summary`、`categories`、`key_findings`、`data_gaps`。
+- [ ] 後端測試：report 包含「基本面拆解」與五大面向。
+- [ ] 後端測試：report 不得把 Q1 EPS 年化成正式全年預估。
+- [ ] 後端測試：evaluation 能抓出缺少 fundamental breakdown 的報告。
+- [ ] Flask API 測試：default run endpoint 回傳 expanded `analysis.fundamentals`。
+- [ ] 前端驗證：`npm run build` 成功。
+- [ ] 瀏覽器驗證：desktop / mobile Fundamentals tab 可讀、可操作、不溢出。
+
+驗收標準：
+
+- 實作完成前，不把 Fundamental Agent 實作項目勾選為完成。
+- 測試能保護 fundamental overclaim 與資料缺口誠實度。
+
+### 12.12 第二階段後續，但不在本切片
+
 - [ ] 新增 Valuation Agent，覆蓋 P/E、P/B、殖利率與情境估值。
 - [ ] 新增 Chip Agent，覆蓋分點、董監持股、董監質押、大股東持股與股東人數。
 - [ ] 新增 Technical Agent，補足財報狗較少覆蓋的價格、量能、動能與技術面。
