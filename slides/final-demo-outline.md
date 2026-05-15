@@ -13,7 +13,7 @@
 不是單純 RAG，而是：
 
 ```text
-Raw sources -> LLMWiki-lite -> Multi-agent workflow -> Report -> Evaluation
+Raw sources -> Evidence Pack -> Multi-agent workflow -> Report -> Evaluation
 ```
 
 ## 4. Architecture
@@ -22,7 +22,7 @@ Raw sources -> LLMWiki-lite -> Multi-agent workflow -> Report -> Evaluation
 - Flask backend。
 - Local fixtures。
 - Deterministic agents。
-- LLMWiki-lite provenance。
+- Evidence Pack provenance。
 
 ## 5. Demo Path
 
@@ -32,7 +32,7 @@ Raw sources -> LLMWiki-lite -> Multi-agent workflow -> Report -> Evaluation
 4. 啟動研究。
 5. 展示 agent trace。
 6. 展示 source map。
-7. 展示 wiki provenance 與 contradiction log。
+7. 展示 evidence provenance 與 contradiction log。
 8. 展示 report。
 9. 展示 evaluation score。
 

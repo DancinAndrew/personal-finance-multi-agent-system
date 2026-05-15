@@ -10,13 +10,13 @@
 - Backend：Flask API。
 - Agents：deterministic MVP agents。
 - Data：local Markdown / JSON fixtures。
-- Knowledge：LLMWiki-lite research wiki。
+- Knowledge：Evidence Pack with provenance and contradiction log。
 - Evaluation：5-point rubric plus hallucination guardrails。
 
 ## Agent Design
 
 1. Intent Router：確認是否為台股研究任務。
-2. Source Retrieval：讀取 source catalog、wiki pages、provenance。
+2. Source Retrieval：讀取 source catalog、evidence pages、provenance。
 3. News / Sector Agent：整理 AI SSD 與 NAND 敘事。
 4. Fundamental Agent：計算 EPS 情境與 Forward P/E。
 5. Risk Agent：產生反方風險。

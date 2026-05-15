@@ -13,7 +13,7 @@ The project needs a clear spec-first path for a multi-agent personal investment 
 - Store only summaries and sources for first-version agent traces, not full intermediate outputs.
 - Use news and financial reports as the first primary data sources.
 - Start with a manually curated dataset, with crawlers or Exa API as future extensions.
-- Add an LLMWiki-lite research knowledge layer so raw sources can be compiled into human-readable, linkable, provenance-backed wiki pages before agent analysis.
+- Add an Evidence Pack research knowledge layer so raw sources can be compiled into human-readable, linkable, provenance-backed evidence pages before agent analysis.
 - Set the initial evaluation pass threshold to 4.0 / 5.
 - Prefer an external brokerage research report as the primary golden sample, but start with a clearly labeled public-source proxy golden sample when the user does not have broker access.
 - Use "whether the AI SSD growth story supports Phison's current valuation" as the first research question.

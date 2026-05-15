@@ -2,7 +2,7 @@
 
 狀態：草稿 v0.1  
 對應設計：`openspec/changes/personal-finance-multi-agent-system/design.md`  
-第一版範圍：本機 fixture、mock / deterministic agents、手動股價、群聯 7 頁 LLMWiki-lite  
+第一版範圍：本機 fixture、mock / deterministic agents、手動股價、群聯 7 頁 Evidence Pack
 
 > 這份任務清單是實作前的工作拆解。每個階段都應能獨立驗收，避免一開始就接 Supabase、即時行情 API、爬蟲或真實 LLM。
 
@@ -11,7 +11,7 @@
 - [x] 第一版先不接 Supabase，只用本機 Markdown / JSON fixture。
 - [x] 第一版先不用真實 LLM，採 mock / deterministic agents。
 - [x] 第一版股價用手動 fixture 或使用者輸入，不接即時行情 API。
-- [x] LLMWiki-lite 第一版只做群聯 7 個 wiki pages + provenance + contradiction log。
+- [x] Evidence Pack 第一版只做群聯 7 個 evidence pages + provenance + contradiction log。
 
 ## 1. 專案骨架
 
@@ -42,9 +42,9 @@
 - price fixture 有明確日期，UI 與報告不得把它當成即時股價。
 - rubric 能覆蓋 source grounding、valuation rigor、industry narrative、risk coverage、user usefulness。
 
-## 3. LLMWiki-lite 知識層
+## 3. Evidence Pack 知識層
 
-- [x] 建立 `knowledge/FINANCE_WIKI.md`，定義 wiki page 格式、citation、claim provenance、stale claim、contradiction log 與 review gate。
+- [x] 建立 `knowledge/EVIDENCE_PACK.md`，定義 evidence page 格式、citation、claim provenance、stale claim、contradiction log 與 review gate。
 - [x] 建立 `knowledge/phison/pages/Company_Phison_8299.md`。
 - [x] 建立 `knowledge/phison/pages/Theme_AI_SSD.md`。
 - [x] 建立 `knowledge/phison/pages/Cycle_NAND.md`。
@@ -56,16 +56,16 @@
 
 驗收標準：
 
-- 7 個 wiki pages 都能被人類直接閱讀，不只是資料 dump。
+- 7 個 evidence pages 都能被人類直接閱讀，不只是資料 dump。
 - 每個重要財務數字、EPS 假設、目標價、券商觀點都能追溯到 source ID。
 - `Contradiction_Log.md` 至少記錄目前已知限制，例如 CMoney 03/09 有 10 家券商但未揭露完整名單。
 
 ## 4. 後端 Deterministic Pipeline
 
 - [x] 實作 Flask app factory 與 `/api/health`。
-- [x] 實作 file store，讀取 source catalog、wiki pages、provenance、rubric、demo run。
+- [x] 實作 file store，讀取 source catalog、evidence pages、provenance、rubric、demo run。
 - [x] 實作 `IntentRouter` mock：辨識群聯台股研究任務。
-- [x] 實作 `SourceRetrieval` deterministic agent：回傳 curated source bundle 與 wiki context。
+- [x] 實作 `SourceRetrieval` deterministic agent：回傳 curated source bundle 與 evidence context。
 - [x] 實作 `NewsSectorAgent` deterministic agent：產出 AI SSD / NAND 敘事摘要。
 - [x] 實作 `FundamentalAgent` deterministic agent：產出 EPS 情境、Forward P/E 計算與估值敏感度。
 - [x] 實作 `RiskAgent` deterministic agent：產出 NAND 週期、庫存、現金流、資料限制等風險。
@@ -75,7 +75,7 @@
 
 驗收標準：
 
-- 呼叫預設 run 時，後端能回傳完整 trace、source list、wiki context、report、evaluation。
+- 呼叫預設 run 時，後端能回傳完整 trace、source list、evidence context、report、evaluation。
 - 每個 agent step 都包含 `input_summary`、`output_summary`、`source_ids`、`confidence`、`latency_ms`。
 - 報告不得輸出買賣指令，且必須標示研究輔助與資料限制。
 
@@ -88,7 +88,7 @@
 - [x] `GET /api/research-runs/{run_id}/steps`
 - [x] `GET /api/research-runs/{run_id}/sources`
 - [x] `GET /api/research-runs/{run_id}/evaluation`
-- [x] `GET /api/research-runs/{run_id}/wiki`
+- [x] `GET /api/research-runs/{run_id}/evidence`
 
 驗收標準：
 
@@ -116,7 +116,7 @@
 - [x] 建立 `AgentTimeline`，顯示 agent steps 狀態與摘要。
 - [x] 建立 `AgentStepDrawer`，顯示單步來源、信心、耗時與輸入 / 輸出摘要。
 - [x] 建立 `SourceList`，顯示 source type 與 reliability note。
-- [x] 建立 `WikiPageViewer`，顯示 LLMWiki-lite pages 與 provenance。
+- [x] 建立 `EvidencePageViewer`，顯示 Evidence Pack pages 與 provenance。
 - [x] 建立 `ContradictionLog`，顯示矛盾、過期 claim 與待 review 項目。
 - [x] 建立 `ReportViewer`，顯示研究報告與來源連結。
 - [x] 建立 `EvaluationPanel`，顯示總分、rubric scores 與修正建議。
@@ -124,7 +124,7 @@
 驗收標準：
 
 - 第一畫面就是可操作的研究工作台，不是 landing page。
-- 使用者能看見 agent trace、source、wiki、report、evaluation 五件事。
+- 使用者能看見 agent trace、source、evidence、report、evaluation 五件事。
 - 所有文字在桌面與手機寬度下不重疊、不溢出。
 
 ## 8. 前後端整合
@@ -139,16 +139,16 @@
 
 - 不需要外部 API key 即可完整 demo。
 - 更改示範股價後，估值情境能更新。
-- UI 上所有重要 claim 都能追到 source 或 wiki provenance。
+- UI 上所有重要 claim 都能追到 source 或 evidence provenance。
 
 ## 9. 展示與文件
 
 - [x] 更新 README，說明專案目的、架構、啟動方式、資料限制。
 - [x] 建立 `docs/proposal.md`，說明題目、使用者場景、quality-of-life 價值、outcome 與 scope。
-- [x] 建立 `docs/architecture.md`，放入系統架構圖、服務流程圖、agent workflow 與 LLMWiki-lite 知識層。
+- [x] 建立 `docs/architecture.md`，放入系統架構圖、服務流程圖、agent workflow 與 Evidence Pack 知識層。
 - [x] 建立 `docs/api.md`，記錄 API endpoint、request / response、錯誤處理與資料限制。
 - [x] 建立 `docs/technical-report.md`，整理系統設計、資料來源、模型 / agent 設計、evaluation、風險與未來工作。
-- [x] 補上 demo script：展示時應依序介紹資料來源、LLMWiki-lite、agent trace、report、evaluation。
+- [x] 補上 demo script：展示時應依序介紹資料來源、Evidence Pack、agent trace、report、evaluation。
 - [x] 建立 `slides/final-demo-outline.md` 或簡報草稿，覆蓋問題、使用者、AI workflow、demo、限制、下一步。
 - [x] 補上「未來工作」：Supabase、真實 LLM、Exa / crawler、即時行情、正式券商研報、完整 knowledge graph。
 - [x] 補上資料來源與免責聲明。
@@ -166,7 +166,7 @@
 - [x] 啟動 Flask dev server。
 - [x] 啟動 Vue dev server。
 - [x] 用瀏覽器檢查桌面與手機 viewport。
-- [x] 驗證 default run 完整呈現 trace、sources、wiki、report、evaluation。
+- [x] 驗證 default run 完整呈現 trace、sources、evidence、report、evaluation。
 - [x] 檢查沒有硬編即時股價、沒有真實 LLM key、沒有 Supabase 依賴。
 - [x] 依 README 從乾淨環境重跑一次本機 demo 流程。
 - [x] 檢查 docs 與 slides 草稿是否覆蓋 final project 四項評分面向。

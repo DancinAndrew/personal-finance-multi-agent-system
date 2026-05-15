@@ -83,10 +83,10 @@ class FileStore:
             excerpts[source["id"]] = self._load_text(excerpt_path)
         return excerpts
 
-    def load_wiki_pages(self) -> list[dict[str, str]]:
+    def load_evidence_pages(self) -> list[dict[str, str]]:
         pages_dir = self.repo_root / "knowledge/phison/pages"
         if not pages_dir.exists():
-            raise FixtureNotFoundError(f"Missing wiki directory: {pages_dir}")
+            raise FixtureNotFoundError(f"Missing evidence directory: {pages_dir}")
 
         pages = [
             {"name": path.name, "content": path.read_text(encoding="utf-8")}

@@ -1,17 +1,17 @@
-# Finance Wiki Schema
+# Finance Evidence Pack Schema
 
-狀態：v0.1  
-用途：規範 LLMWiki-lite 研究頁的格式、引用、矛盾與人工 review。
+狀態：v0.1
+用途：規範研究 evidence pages 的格式、引用、矛盾與人工 review。
 
 ## 原則
 
 - Raw sources 不可直接修改，只能引用。
-- Wiki pages 可以更新，但高風險更新必須人工 review。
+- Evidence pages 可以更新，但高風險更新必須人工 review。
 - 每個重要 claim 必須能追溯到 `source_id`、日期、資料類型與可信度限制。
 - CMoney、新聞、FactSet 共識、官方資料必須分層，不得混成同一可信度。
-- Wiki 不是最終投資建議，而是 agent 分析前的可讀知識層。
+- Evidence Pack 不是最終投資建議，而是 agent 分析前的可讀證據層。
 
-## Wiki Page Format
+## Evidence Page Format
 
 每個 page 應包含：
 

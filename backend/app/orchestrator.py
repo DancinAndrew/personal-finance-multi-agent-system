@@ -53,7 +53,7 @@ class ResearchOrchestrator:
         now = datetime.now(timezone.utc).isoformat()
 
         sources = self.store.load_source_catalog()
-        wiki_pages = self.store.load_wiki_pages()
+        evidence_pages = self.store.load_evidence_pages()
         provenance = self.store.load_provenance()
         rubric = self.store.load_rubric()
         health_check_fixture = self.store.load_health_checks()
@@ -62,7 +62,7 @@ class ResearchOrchestrator:
 
         route = self.intent_router.run(run_id, question, target)
         steps.append(route.step)
-        retrieval = self.source_retrieval.run(run_id, sources, wiki_pages, provenance)
+        retrieval = self.source_retrieval.run(run_id, sources, evidence_pages, provenance)
         steps.append(retrieval.step)
         narrative = self.news_sector_agent.run(run_id)
         steps.append(narrative.step)
@@ -111,8 +111,8 @@ class ResearchOrchestrator:
             },
             "steps": steps,
             "sources": sources,
-            "wiki": {
-                "pages": wiki_pages,
+            "evidence": {
+                "pages": evidence_pages,
                 "provenance": provenance,
             },
             "analysis": {

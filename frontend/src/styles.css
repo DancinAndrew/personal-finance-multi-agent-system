@@ -247,18 +247,18 @@ select {
 }
 
 .report-content h2,
-.wiki-content h2 {
+.evidence-content h2 {
   margin-top: 24px;
   font-size: 18px;
 }
 
 .report-content p,
-.wiki-content p {
+.evidence-content p {
   margin-bottom: 12px;
 }
 
 .report-content ul,
-.wiki-content ul {
+.evidence-content ul {
   padding-left: 20px;
 }
 
@@ -415,7 +415,7 @@ select {
   overflow-wrap: anywhere;
 }
 
-.wiki-content {
+.evidence-content {
   max-height: 320px;
   overflow: auto;
   margin-top: 12px;

@@ -4,7 +4,7 @@
       <div>
         <p class="eyebrow">AIASE Final Project MVP</p>
         <h1>台股多代理投資研究工作台</h1>
-        <p class="subhead">以群聯電子 8299 為範例，展示資料來源、LLMWiki-lite、代理執行軌跡、研究報告與評估。</p>
+        <p class="subhead">以群聯電子 8299 為範例，展示資料來源、evidence pack、代理執行軌跡、研究報告與評估。</p>
       </div>
       <div class="status-strip">
         <span>本機 fixture</span>
@@ -89,7 +89,7 @@
           <button :class="{ active: activeTab === 'step' }" type="button" @click="activeTab = 'step'">Step</button>
           <button :class="{ active: activeTab === 'sources' }" type="button" @click="activeTab = 'sources'">Sources</button>
           <button :class="{ active: activeTab === 'health' }" type="button" @click="activeTab = 'health'">Health</button>
-          <button :class="{ active: activeTab === 'wiki' }" type="button" @click="activeTab = 'wiki'">Wiki</button>
+          <button :class="{ active: activeTab === 'evidence' }" type="button" @click="activeTab = 'evidence'">Evidence</button>
           <button :class="{ active: activeTab === 'eval' }" type="button" @click="activeTab = 'eval'">Eval</button>
         </div>
 
@@ -138,15 +138,15 @@
           </article>
         </section>
 
-        <section v-if="activeTab === 'wiki'" class="tab-body">
-          <h3>LLMWiki-lite</h3>
-          <select v-model="selectedWikiName">
-            <option v-for="page in result.wiki.pages" :key="page.name" :value="page.name">{{ page.name }}</option>
+        <section v-if="activeTab === 'evidence'" class="tab-body">
+          <h3>Evidence Pack</h3>
+          <select v-model="selectedEvidenceName">
+            <option v-for="page in result.evidence.pages" :key="page.name" :value="page.name">{{ page.name }}</option>
           </select>
-          <article class="wiki-content" v-html="renderMarkdown(selectedWikiContent)"></article>
+          <article class="evidence-content" v-html="renderMarkdown(selectedEvidenceContent)"></article>
           <h4>Provenance</h4>
           <ul class="provenance-list">
-            <li v-for="claim in result.wiki.provenance" :key="claim.claim_id">
+            <li v-for="claim in result.evidence.provenance" :key="claim.claim_id">
               <strong>{{ claim.claim_id }}</strong>
               <span>{{ claim.source_ids.join(', ') }} · {{ claim.status }}</span>
             </li>
@@ -181,7 +181,7 @@ const defaultQuestion = '人工智慧固態硬碟成長故事是否足以支撐�
 
 const result = ref(null)
 const selectedStep = ref(null)
-const selectedWikiName = ref('')
+const selectedEvidenceName = ref('')
 const activeTab = ref('step')
 const loading = ref(false)
 const error = ref('')
@@ -189,9 +189,9 @@ const targetName = ref('群聯電子（8299）')
 const question = ref(defaultQuestion)
 const price = ref(2430)
 
-const selectedWikiContent = computed(() => {
+const selectedEvidenceContent = computed(() => {
   if (!result.value) return ''
-  return result.value.wiki.pages.find((page) => page.name === selectedWikiName.value)?.content || ''
+  return result.value.evidence.pages.find((page) => page.name === selectedEvidenceName.value)?.content || ''
 })
 
 const healthGapSummary = computed(() => {
@@ -203,7 +203,7 @@ const healthGapSummary = computed(() => {
 watch(result, (next) => {
   if (!next) return
   selectedStep.value = next.steps[0]
-  selectedWikiName.value = next.wiki.pages[0]?.name || ''
+  selectedEvidenceName.value = next.evidence.pages[0]?.name || ''
   price.value = next.run.price_fixture.price
 })
 

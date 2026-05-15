@@ -8,7 +8,7 @@ flowchart LR
   Vue --> Flask["Flask API"]
   Flask --> Orchestrator["Research Orchestrator"]
   Orchestrator --> Agents["Deterministic Agents"]
-  Orchestrator --> Wiki["LLMWiki-lite"]
+  Orchestrator --> Evidence["Evidence Pack"]
   Orchestrator --> Fixtures["Local JSON / Markdown Fixtures"]
   Agents --> Report["Research Report"]
   Agents --> Eval["Evaluation"]
@@ -32,24 +32,24 @@ sequenceDiagram
   U->>API: Start Phison research
   API->>O: Create research run
   O->>R: Classify intent
-  O->>S: Load sources and wiki
+  O->>S: Load sources and evidence
   O->>N: Build AI SSD / NAND narrative
   O->>F: Build EPS and valuation scenarios
   O->>K: Generate opposing risks
   O->>G: Generate source-backed report
   O->>E: Score report
-  API-->>U: Return trace, sources, wiki, report, evaluation
+  API-->>U: Return trace, sources, evidence, report, evaluation
 ```
 
-## LLMWiki-lite
+## Evidence Pack
 
 ```mermaid
 flowchart TB
-  Sources["Raw Sources"] --> WikiPages["Research Wiki Pages"]
+  Sources["Raw Sources"] --> EvidencePages["Research Evidence Pack Pages"]
   Sources --> Provenance["Claim Provenance"]
-  WikiPages --> Agents["Agents"]
+  EvidencePages --> Agents["Agents"]
   Provenance --> Agents
-  WikiPages --> Audit["Contradiction Log"]
+  EvidencePages --> Audit["Contradiction Log"]
   Audit --> Evaluation["Evaluation"]
 ```
 

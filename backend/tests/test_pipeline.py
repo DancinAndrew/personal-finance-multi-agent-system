@@ -23,8 +23,8 @@ class FileStoreTests(unittest.TestCase):
         for source in sources:
             self.assertTrue(required.issubset(source.keys()))
 
-    def test_wiki_pages_and_provenance_load(self) -> None:
-        pages = self.store.load_wiki_pages()
+    def test_evidence_pages_and_provenance_load(self) -> None:
+        pages = self.store.load_evidence_pages()
         provenance = self.store.load_provenance()
         self.assertEqual(len(pages), 7)
         self.assertGreaterEqual(len(provenance), 5)
@@ -67,6 +67,8 @@ class OrchestratorTests(unittest.TestCase):
         self.assertEqual(result["run"]["status"], "completed")
         self.assertEqual(len(result["steps"]), 8)
         self.assertIn("health_check_agent", [step["agent"] for step in result["steps"]])
+        self.assertIn("evidence", result)
+        self.assertNotIn("wiki", result)
         self.assertIn("report_markdown", result["report"])
         self.assertGreaterEqual(result["evaluation"]["total_score"], 4.0)
         for step in result["steps"]:
@@ -213,6 +215,24 @@ class FlaskApiTests(unittest.TestCase):
         response = client.get("/api/research-runs/missing")
         self.assertEqual(response.status_code, 404)
         self.assertEqual(response.get_json()["error"], "research_run_not_found")
+
+    def test_evidence_endpoint_when_flask_is_available(self) -> None:
+        try:
+            from backend.app import create_app
+        except ModuleNotFoundError as exc:
+            if exc.name == "flask":
+                self.skipTest("Flask is not installed in this environment")
+            raise
+
+        app = create_app(REPO_ROOT)
+        client = app.test_client()
+        response = client.get("/api/research-runs/run_demo_phison_ai_ssd/evidence")
+        self.assertEqual(response.status_code, 200)
+        data = response.get_json()
+        self.assertEqual(data["run_id"], "run_demo_phison_ai_ssd")
+        self.assertEqual(len(data["evidence"]["pages"]), 7)
+        self.assertGreaterEqual(len(data["evidence"]["provenance"]), 5)
+        self.assertNotIn("wiki", data)
 
 
 if __name__ == "__main__":

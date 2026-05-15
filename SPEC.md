@@ -56,7 +56,7 @@ OpenSpec 變更：`personal-finance-multi-agent-system`
 - 意圖路由代理：判斷問題是否需要檢索增強生成、資料查詢、投資流派分析、或直接拒答 / 澄清。
 - 研究代理：至少包含新聞 / 產業摘要、基本面、技術分析、風險與反方觀點。
 - 檢索層：支援新聞、財報 / 法說會紀錄、投資知識筆記等資料來源的檢索。
-- 研究 Wiki 知識層：以 LLMWiki-lite 方式把原始來源整理成可讀、可連結、可追溯、可更新的研究頁面。
+- Evidence Pack 證據層：把原始來源整理成可讀、可連結、可追溯、可更新的研究證據頁。
 - 評估代理：用固定評估規準檢查輸出品質，並產生可追蹤分數。
 - 報告產生器：輸出一份帶來源、假設、風險、信心分數的研究摘要。
 
@@ -80,7 +80,7 @@ OpenSpec 變更：`personal-finance-multi-agent-system`
 | 第一版資料整理方式 | 先手動整理資料；後續可加入爬蟲或 Exa API |
 | 評估分數門檻 | 4.0 / 5 |
 | 黃金樣本策略 | 先使用 CMoney / 新聞 / FactSet 共識 / 官方財務資料整理成公開來源 proxy golden sample；日後取得正式券商研報再升級 |
-| 知識層策略 | 導入 LLMWiki-lite：原始來源不可變、研究 Wiki 可更新、claim 必須能追溯來源與版本 |
+| 證據層策略 | 導入 Evidence Pack：原始來源不可變、研究證據頁可更新、claim 必須能追溯來源與版本 |
 | 課程交付策略 | 對齊 AIASE final project：可執行 Web service、架構 / 流程 / API 文件、Demo slides、GitHub source、technical report |
 
 ### 券商研究報告與類 Gartner 產業分析模板的差異
@@ -126,25 +126,21 @@ OpenSpec 變更：`personal-finance-multi-agent-system`
 - 可以用來檢查系統是否知道 CMoney 與新聞多半只是摘要或轉述，不是完整研報。
 - 日後若取得正式授權券商研報，應以正式研報更新本樣本，並保留公開來源樣本作為對照組。
 
-### LLMWiki-lite 研究 Wiki 策略
+### Evidence Pack 研究證據策略
 
-參考文章：
-
-- `The LLMWiki explained. How a new idea from AI research — and…  by Altaf Rehmani  Not So Technical  Apr, 2026  Medium.md`
-
-這篇文章的重點可以融入本專案，但應採用輕量版本，而不是一開始做大型企業級知識治理系統。本專案的 LLMWiki-lite 定位如下：
+本專案不採用 llm-wiki 或外部知識庫產品；第一版只保留一個本機、可審計的 Evidence Pack，用來承接來源整理、claim provenance、矛盾紀錄與人工 review。
 
 1. **Raw sources：不可變原始來源**
    - 新聞、財報、CMoney 摘要、FactSet 共識、公司官方資料、使用者 Obsidian 筆記都先作為不可變來源保存。
    - 系統可以讀取、摘要與引用，但不得直接修改原始來源。
 
-2. **Research Wiki：可更新的研究知識層**
-   - 系統把原始來源整理成一組 human-readable Markdown wiki pages。
+2. **Research Evidence Pack：可更新的研究知識層**
+   - 系統把原始來源整理成一組 human-readable Markdown evidence pages。
    - 第一版可先建立群聯相關頁面，例如：公司頁、AI SSD 題材頁、NAND 景氣循環頁、EPS / 估值假設頁、風險頁、券商觀點頁。
-   - Wiki 頁不是最終答案，而是讓 agent 不必每次從零開始讀所有來源的中間知識層。
+   - Evidence page 不是最終答案，而是讓 agent 不必每次從零開始讀所有來源的中間證據層。
 
 3. **Schema / instructions：維護規則**
-   - 系統必須定義 wiki page 的格式、引用規則、claim provenance、矛盾判定與 stale claim 判定。
+   - 系統必須定義 evidence page 的格式、引用規則、claim provenance、矛盾判定與 stale claim 判定。
    - 這層相當於文章中的 schema / AGENTS.md，用來約束 agent 如何更新知識。
 
 4. **Audit / review：審計與人工確認**
@@ -156,9 +152,9 @@ OpenSpec 變更：`personal-finance-multi-agent-system`
 
 | 方法 | 本專案用法 | 限制 |
 |---|---|---|
-| RAG | 從原始來源或 wiki 頁檢索相關內容 | 每次查詢容易重新拼答案，知識不一定累積 |
+| RAG | 從原始來源或 evidence 頁檢索相關內容 | 每次查詢容易重新拼答案，知識不一定累積 |
 | Knowledge Graph | 後續可用於公司、產品、風險、供應鏈關係 | 第一版建圖成本高，schema 容易過早僵化 |
-| LLMWiki-lite | 把投資研究知識變成可讀、可連結、可審計的 Markdown wiki | 需要良好 provenance 與人工 review，避免 AI 自動污染知識庫 |
+| Evidence Pack | 把投資研究知識變成可讀、可連結、可審計的 Markdown evidence | 需要良好 provenance 與人工 review，避免 AI 自動污染知識庫 |
 
 ### AIASE Final Project 要求對齊
 
@@ -177,8 +173,8 @@ OpenSpec 變更：`personal-finance-multi-agent-system`
 | Demo Presentation and Slides | 需列入交付物 | 實作階段需建立 demo script 與 slides |
 | GitHub Source and Technical Report | 需列入交付物 | 實作階段需建立 README、technical report、API docs |
 | 不能執行抽查為 0 分 | 需列入驗收條件 | MVP 必須可本機啟動，不依賴 Supabase、真實 LLM、即時行情 API |
-| Agent / RAG / tool contract / observability | 符合 | agent trace、LLMWiki-lite、source provenance、evaluation、成本與延遲欄位 |
-| 安全、審計、guardrails、HITL | 符合 | 非投資建議、人類決策責任、反幻覺、contradiction log、high-risk wiki update review |
+| Agent / RAG / tool contract / observability | 符合 | agent trace、Evidence Pack、source provenance、evaluation、成本與延遲欄位 |
+| 安全、審計、guardrails、HITL | 符合 | 非投資建議、人類決策責任、反幻覺、contradiction log、high-risk evidence update review |
 
 目前需要注意：
 
@@ -318,23 +314,23 @@ OpenSpec 變更：`personal-finance-multi-agent-system`
 - 當後續版本要加入爬蟲或 Exa API 時
 - 則必須保留與手動資料相同的來源欄位與品質檢查，不得讓自動資料繞過可追溯要求。
 
-### 需求：系統必須提供 LLMWiki-lite 研究知識層
+### 需求：系統必須提供 Evidence Pack 研究知識層
 
-系統必須把原始來源整理成可讀、可連結、可審計的研究 Wiki，作為檢索與代理分析之間的中間層。
+系統必須把原始來源整理成可讀、可連結、可審計的 Evidence Pack，作為檢索與代理分析之間的中間證據層。
 
 #### 情境：系統讀取原始來源
 
 - 當系統讀取新聞、財報、CMoney 摘要、FactSet 共識、公司官方資料或使用者筆記時
 - 則系統必須保留原始來源紀錄，不得直接覆寫原文或把摘要當成原始資料。
 
-#### 情境：系統產生研究 Wiki 頁面
+#### 情境：系統產生研究證據頁
 
 - 當系統從來源整理出公司、產業、產品、估值、風險或券商觀點等知識時
-- 則系統必須寫入 human-readable wiki page，並記錄每個重要 claim 的來源、日期與可信度限制。
+- 則系統必須寫入 human-readable evidence page，並記錄每個重要 claim 的來源、日期與可信度限制。
 
-#### 情境：新資料與既有 Wiki 矛盾
+#### 情境：新資料與既有證據 claim 矛盾
 
-- 當新來源和既有 Wiki claim 出現 EPS、目標價、風險判斷、產業敘事或資料日期上的矛盾時
+- 當新來源和既有 evidence claim 出現 EPS、目標價、風險判斷、產業敘事或資料日期上的矛盾時
 - 則系統必須記錄 contradiction log，而不得直接覆蓋舊 claim 並假裝沒有衝突。
 
 #### 情境：來源更新或過期
@@ -342,7 +338,7 @@ OpenSpec 變更：`personal-finance-multi-agent-system`
 - 當來源文件更新、hash 改變、或關鍵資料已超過可接受時效時
 - 則系統必須將相關 claim 標記為 stale，並在研究報告與評估中降低信心或提示需要更新。
 
-#### 情境：高風險 Wiki 更新
+#### 情境：高風險 evidence 更新
 
 - 當更新會改變估值結論、風險等級、投資論點或黃金樣本評估基準時
 - 則第一版必須採取人工 review 後才視為正式採納。
@@ -532,12 +528,12 @@ OpenSpec 變更：`personal-finance-multi-agent-system`
 #### 情境：繪製架構與流程圖
 
 - 當準備課程 demo 或 technical report 時
-- 則專案必須包含系統架構圖、服務流程圖與 agent workflow 圖，並標示前端、後端、資料層、研究 Wiki、agent 與 evaluation 的關係。
+- 則專案必須包含系統架構圖、服務流程圖與 agent workflow 圖，並標示前端、後端、資料層、Evidence Pack、agent 與 evaluation 的關係。
 
 #### 情境：準備 Demo slides
 
 - 當準備 Demo Presentation and Slides 時
-- 則 slides 必須能說清楚問題、使用者、核心 AI 流程、LLMWiki-lite 知識層、agent trace、demo path、風險限制與下一步。
+- 則 slides 必須能說清楚問題、使用者、核心 AI 流程、Evidence Pack 知識層、agent trace、demo path、風險限制與下一步。
 
 #### 情境：抽查不能執行的風險
 

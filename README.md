@@ -12,7 +12,7 @@
 - `backend/`：Flask API 與 deterministic multi-agent pipeline。
 - `frontend/`：Vue 研究工作台。
 - `data/`：本機 source / price / evaluation fixtures。
-- `knowledge/`：LLMWiki-lite 研究頁、provenance 與 contradiction log。
+- `knowledge/`：Evidence Pack 研究頁、provenance 與 contradiction log。
 
 第一版實作邊界：
 
@@ -20,7 +20,7 @@
 - 本機 Markdown / JSON fixture。
 - mock / deterministic agents。
 - 手動股價或使用者輸入，不接即時行情 API。
-- LLMWiki-lite：群聯 7 個 wiki pages + provenance + contradiction log。
+- Evidence Pack：群聯 7 個 evidence pages + provenance + contradiction log。
 - 不先接 Supabase、真實 LLM、爬蟲或外部行情 API。
 
 ## 本機啟動
@@ -67,5 +67,5 @@ npm audit --audit-level=moderate
 1. 開啟 Vue 工作台。
 2. 使用預設標的「群聯電子 8299」與研究問題。
 3. 調整示範股價，啟動研究。
-4. 依序展示 Agent Trace、Sources、LLMWiki-lite、Research Report、Evaluation。
+4. 依序展示 Agent Trace、Sources、Evidence Pack、Research Report、Evaluation。
 5. 強調輸出是研究輔助，不是買賣建議。

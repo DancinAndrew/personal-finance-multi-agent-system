@@ -24,7 +24,7 @@ Response includes:
 - `run`
 - `steps`
 - `sources`
-- `wiki`
+- `evidence`
 - `analysis`
 - `report`
 - `evaluation`
@@ -66,9 +66,9 @@ Request:
 
 用途：取得 evaluation result。
 
-## GET /api/research-runs/{run_id}/wiki
+## GET /api/research-runs/{run_id}/evidence
 
-用途：取得 LLMWiki-lite pages 與 provenance。
+用途：取得 Evidence Pack pages 與 provenance。
 
 ## Health Check Payload
 

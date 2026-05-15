@@ -25,7 +25,7 @@
 - Vue Web 工作台。
 - 本機 fixtures。
 - Deterministic agents。
-- LLMWiki-lite 研究知識層。
+- Evidence Pack 研究知識層。
 - 群聯 proxy golden sample。
 - 財報狗功能 benchmark 拆解文件：`docs/statementdog-feature-benchmark.md`。
 

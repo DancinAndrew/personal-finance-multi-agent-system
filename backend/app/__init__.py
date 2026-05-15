@@ -77,12 +77,12 @@ def create_app(repo_root: Path | None = None) -> Any:
             return jsonify({"error": "research_run_not_found", "run_id": run_id}), 404
         return jsonify({"run_id": run_id, "evaluation": result["evaluation"]})
 
-    @app.get("/api/research-runs/<run_id>/wiki")
-    def get_research_wiki(run_id: str) -> Any:
+    @app.get("/api/research-runs/<run_id>/evidence")
+    def get_research_evidence(run_id: str) -> Any:
         result = _get_or_create_run(run_id)
         if result is None:
             return jsonify({"error": "research_run_not_found", "run_id": run_id}), 404
-        return jsonify({"run_id": run_id, "wiki": result["wiki"]})
+        return jsonify({"run_id": run_id, "evidence": result["evidence"]})
 
     def _get_or_create_run(run_id: str) -> dict[str, Any] | None:
         if run_id in runs:

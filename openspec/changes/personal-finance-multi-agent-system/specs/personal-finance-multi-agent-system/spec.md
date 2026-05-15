@@ -90,27 +90,27 @@ The system SHALL use a manually curated Phison dataset for the first version.
 - **WHEN** a later version adds crawlers or Exa API
 - **THEN** automated sources preserve the same source metadata and quality checks as manually curated data.
 
-### Requirement: System provides an LLMWiki-lite research knowledge layer
-The system SHALL organize raw sources into a human-readable, linkable, and auditable research wiki layer between retrieval and agent analysis.
+### Requirement: System provides an Evidence Pack research knowledge layer
+The system SHALL organize raw sources into a human-readable, linkable, and auditable research evidence pack layer between retrieval and agent analysis.
 
 #### Scenario: Raw source is read
 - **WHEN** the system reads news, financial reports, CMoney summaries, FactSet consensus estimates, official company data, or user notes
 - **THEN** it preserves the raw source record and must not overwrite the original text or treat summaries as primary source data.
 
-#### Scenario: Research wiki page is produced
+#### Scenario: Research evidence page is produced
 - **WHEN** the system extracts company, industry, product, valuation, risk, or brokerage-view knowledge from sources
-- **THEN** it writes the knowledge into a human-readable wiki page and records the source, date, and reliability limitation for each important claim.
+- **THEN** it writes the knowledge into a human-readable evidence page and records the source, date, and reliability limitation for each important claim.
 
-#### Scenario: New data conflicts with an existing wiki claim
-- **WHEN** a new source conflicts with an existing wiki claim about EPS, target price, risk, industry narrative, or data recency
+#### Scenario: New data conflicts with an existing evidence claim
+- **WHEN** a new source conflicts with an existing evidence claim about EPS, target price, risk, industry narrative, or data recency
 - **THEN** the system records the conflict in a contradiction log instead of silently overwriting the previous claim.
 
 #### Scenario: Source is updated or stale
 - **WHEN** a source document changes, its content hash changes, or key data exceeds the acceptable freshness window
 - **THEN** the system marks derived claims as stale and lowers confidence or asks for an update in reports and evaluation.
 
-#### Scenario: High-risk wiki update is proposed
-- **WHEN** a wiki update changes valuation conclusions, risk level, investment thesis, or golden-sample evaluation criteria
+#### Scenario: High-risk evidence update is proposed
+- **WHEN** an evidence update changes valuation conclusions, risk level, investment thesis, or golden-sample evaluation criteria
 - **THEN** the MVP requires human review before treating the update as accepted knowledge.
 
 ### Requirement: System uses an external brokerage report or public-source proxy as the golden sample
@@ -357,11 +357,11 @@ The project SHALL prepare the documentation and presentation artifacts needed fo
 
 #### Scenario: Architecture and flow diagrams are prepared
 - **WHEN** course demo or technical report materials are prepared
-- **THEN** the project includes a system architecture diagram, service flow diagram, and agent workflow diagram showing frontend, backend, data layer, research wiki, agents, and evaluation.
+- **THEN** the project includes a system architecture diagram, service flow diagram, and agent workflow diagram showing frontend, backend, data layer, research evidence pack, agents, and evaluation.
 
 #### Scenario: Demo slides are prepared
 - **WHEN** demo presentation slides are produced
-- **THEN** they explain the problem, user, core AI workflow, LLMWiki-lite knowledge layer, agent trace, demo path, risks, limitations, and next steps.
+- **THEN** they explain the problem, user, core AI workflow, Evidence Pack knowledge layer, agent trace, demo path, risks, limitations, and next steps.
 
 #### Scenario: External services are unavailable
 - **WHEN** external APIs, model services, or network access are unavailable during evaluation

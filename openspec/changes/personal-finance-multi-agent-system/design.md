@@ -15,7 +15,7 @@ OpenSpec 變更：`personal-finance-multi-agent-system`
 | 資料庫 | Supabase Cloud，若第一版需要持久化 | 適合快速建立 Postgres、Auth、Storage 與 API；但不應在第一版過早綁死資料模型 |
 | 第一版資料 | 手動 curated fixtures + golden sample + 使用者 Obsidian 筆記 | 降低爬蟲與資料品質風險，先讓 demo 和 evaluation 成立 |
 | 第一版資料收集 | 不先自動爬蟲 | Exa API、CMoney/news crawler、MOPS crawler 放到後續版本 |
-| 研究知識層 | LLMWiki-lite Markdown wiki | 把 raw sources 轉成可讀、可連結、可追溯、可審計的研究知識 |
+| 研究證據層 | Evidence Pack Markdown pages | 把 raw sources 轉成可讀、可連結、可追溯、可審計的研究證據 |
 
 ### 1.1 已確認第一版 implementation 前提
 
@@ -24,7 +24,7 @@ OpenSpec 變更：`personal-finance-multi-agent-system`
 | Supabase | 第一版先不接，只用本機 fixture / Markdown / JSON；Supabase Cloud 作為後續持久化版本 |
 | LLM | 第一版先使用 mock / deterministic agents；等 UI、trace、evaluation 穩定後再接真實 LLM |
 | 股價資料 | 第一版用手動 fixture 或使用者輸入展示股價，不接即時行情 API |
-| LLMWiki-lite 深度 | 第一版只做群聯 7 個 wiki pages + provenance + contradiction log，不做完整 knowledge graph |
+| Evidence Pack 深度 | 第一版只做群聯 7 個 evidence pages + provenance + contradiction log，不做完整 knowledge graph |
 
 ## 2. 設計原則
 
@@ -48,9 +48,9 @@ OpenSpec 變更：`personal-finance-multi-agent-system`
    - 若要保存研究歷史、trace、evaluation 與來源資料，使用 Supabase。
    - 若只是第一版 demo，可先用本機 JSON / Markdown fixture 讓流程跑通。
 
-6. **研究 Wiki 讓知識累積，而不是每次從零開始 RAG**
+6. **Evidence Pack 讓證據累積，而不是每次從零開始 RAG**
    - Raw sources 保持不可變。
-   - Wiki pages 由 agent 建議更新，但高風險結論需人工 review。
+   - Evidence pages 由 agent 建議更新，但高風險結論需人工 review。
    - 每個重要 claim 都要能追溯來源、日期與內容版本。
 
 ## 3. 系統架構
@@ -69,21 +69,21 @@ flowchart LR
   Orchestrator --> RiskAgent["Risk / Opposing View Agent"]
   Orchestrator --> ReportAgent["Report Generator"]
   Orchestrator --> EvalAgent["Evaluation Agent"]
-  Orchestrator --> WikiCompiler["Wiki Compiler"]
+  Orchestrator --> EvidenceCompiler["Evidence Compiler"]
 
   Retrieval --> CuratedData["Curated Fixtures"]
   Retrieval --> GoldenSample["Proxy Golden Sample"]
   Retrieval --> Obsidian["Obsidian Note Import"]
-  CuratedData --> ResearchWiki["LLMWiki-lite Research Wiki"]
-  GoldenSample --> ResearchWiki
-  Obsidian --> ResearchWiki
-  WikiCompiler --> ResearchWiki
-  ResearchWiki --> Retrieval
+  CuratedData --> ResearchEvidence["Evidence Pack"]
+  GoldenSample --> ResearchEvidence
+  Obsidian --> ResearchEvidence
+  EvidenceCompiler --> ResearchEvidence
+  ResearchEvidence --> Retrieval
 
   Flask --> TraceStore["Trace Store"]
   Flask --> ReportStore["Report Store"]
   Flask --> SourceStore["Source Store"]
-  Flask --> AuditStore["Wiki Audit Store"]
+  Flask --> AuditStore["Evidence Audit Store"]
 
   TraceStore -. "optional persistent" .-> Supabase["Supabase Cloud"]
   ReportStore -. "optional persistent" .-> Supabase
@@ -120,8 +120,8 @@ flowchart LR
    - 顯示總分、各項 rubric 分數、未通過原因。
    - 若低於 4.0 / 5，標示低信心或需要補資料。
 
-6. **Research Wiki Panel**
-   - 顯示目前已整理出的 wiki pages。
+6. **Research Evidence Pack Panel**
+   - 顯示目前已整理出的 evidence pages。
    - 顯示 claim provenance、contradiction log、stale claim 提醒。
    - 第一版可以只讀不改，讓使用者看見知識如何被整理。
 
@@ -137,7 +137,7 @@ flowchart LR
 | `HealthCheckPanel` | 顯示七種股票健診、狀態、理由、缺口與來源限制 |
 | `ReportViewer` | 報告顯示與 claim-source linking |
 | `EvaluationPanel` | 分數、rubric、修正建議 |
-| `WikiPageViewer` | 顯示 LLMWiki-lite 研究頁與 provenance |
+| `EvidencePageViewer` | 顯示 Evidence Pack 研究頁與 provenance |
 | `ContradictionLog` | 顯示矛盾、過期 claim 與待 review 更新 |
 
 ## 5. 後端設計
@@ -181,9 +181,9 @@ flowchart LR
 | `agents/risk_agent.py` | 產生反方觀點與風險 |
 | `agents/report_generator.py` | 產生研究報告 |
 | `agents/evaluation_agent.py` | 依 rubric 評分 |
-| `knowledge/wiki_compiler.py` | 將來源摘要整理成 wiki pages 與更新提案 |
+| `knowledge/evidence_compiler.py` | 將來源摘要整理成 evidence pages 與更新提案 |
 | `knowledge/provenance.py` | 記錄 claim 來源、source hash、stale 狀態 |
-| `knowledge/FINANCE_WIKI.md` | 定義 wiki page 格式、引用規則、矛盾判定與 review gate |
+| `knowledge/EVIDENCE_PACK.md` | 定義 evidence page 格式、引用規則、矛盾判定與 review gate |
 | `stores/file_store.py` | 第一版本機 JSON / Markdown 資料讀寫 |
 | `stores/supabase_store.py` | Supabase 持久化，若啟用 |
 
@@ -209,7 +209,7 @@ sequenceDiagram
   R-->>O: Taiwan equity research
   O->>S: retrieve curated sources
   S-->>O: source bundle
-  O->>S: load/update research wiki context
+  O->>S: load/update research evidence context
   O->>N: analyze news / sector narrative
   N-->>O: sector thesis
   O->>F: analyze financials / valuation
@@ -234,7 +234,7 @@ Health Check Agent 是財報狗 benchmark 升級的第一個可執行切片。�
 
 | 類別 | 決策 |
 |---|---|
-| 第一版資料策略 | 保守缺口型：只使用已整理公開 fixture、source catalog、wiki context 與報告內已有的示範估值資料 |
+| 第一版資料策略 | 保守缺口型：只使用已整理公開 fixture、source catalog、evidence context 與報告內已有的示範估值資料 |
 | 不足資料處理 | 不足以判斷時標 `unknown`；登入、付費、未納入 fixture 或第一版資料入口不存在時標 `not_available` |
 | 不允許行為 | 不得用 mock 數字補 pass / fail；不得宣稱讀取財報狗登入或付費頁；不得把 health check 當買賣建議 |
 | 本切片輸出 | agent step、`analysis.health_checks`、報告中的股票健診摘要、前端 Health tab、evaluation 檢查 |
@@ -519,19 +519,19 @@ Evaluation Agent 必須新增 fundamental coverage 檢查：
 - 若 report 使用 EPS 年化卻沒有說明限制，應 hard fail 或至少重大扣分。
 - 若 report 清楚列出營收、獲利、安全性、成長力、現金流品質與缺口，應提高 valuation rigor、risk coverage、user usefulness。
 
-## 7. LLMWiki-lite 研究 Wiki 層
+## 7. Evidence Pack 研究證據層
 
-LLMWiki-lite 是本專案的研究知識層。它不是取代 RAG，也不是完整 knowledge graph；它把已整理來源轉成可讀、可連結、可審計的 Markdown pages，讓 agent 不必每次從 raw documents 重新拼答案。
+Evidence Pack 是本專案的研究證據層。它不是取代 RAG，也不是完整 knowledge graph；它把已整理來源轉成可讀、可連結、可審計的 Markdown pages，讓 agent 不必每次從 raw documents 重新拼答案。
 
 ### 7.1 三層設計
 
 | 層級 | 本專案對應 | 是否可修改 | 用途 |
 |---|---|---|---|
 | Raw sources | 新聞、財報、CMoney、FactSet、官方資料、Obsidian 筆記 | 不可直接修改 | 保留原始依據與來源 hash |
-| Research Wiki | 群聯公司頁、AI SSD 頁、NAND 週期頁、估值假設頁、風險頁、券商觀點頁 | 可由 agent 提議更新 | 累積可讀研究知識 |
-| Wiki schema | `knowledge/FINANCE_WIKI.md` | 人工維護 | 約束頁面格式、citation、provenance、矛盾與 review 規則 |
+| Research Evidence Pack | 群聯公司頁、AI SSD 頁、NAND 週期頁、估值假設頁、風險頁、券商觀點頁 | 可由 agent 提議更新 | 累積可讀研究知識 |
+| Evidence schema | `knowledge/EVIDENCE_PACK.md` | 人工維護 | 約束頁面格式、citation、provenance、矛盾與 review 規則 |
 
-### 7.2 第一版 Wiki 頁面
+### 7.2 第一版 Evidence 頁面
 
 第一版先針對群聯建立最小頁面集：
 
@@ -566,11 +566,11 @@ LLMWiki-lite 是本專案的研究知識層。它不是取代 RAG，也不是完
 
 1. 新來源進入 `data/phison/sources/`。
 2. Source Retrieval 計算 source hash 並建立 source record。
-3. Wiki Compiler 判斷影響哪些 wiki pages。
-4. Wiki Compiler 產生更新提案，不直接覆蓋高風險頁面。
+3. Evidence Compiler 判斷影響哪些 evidence pages。
+4. Evidence Compiler 產生更新提案，不直接覆蓋高風險頁面。
 5. 若新資料和既有 claim 矛盾，寫入 `Contradiction_Log.md`。
-6. 人工 review 後，更新正式 wiki page。
-7. Research Orchestrator 從 wiki + raw sources 取 context，再交給各 agent。
+6. 人工 review 後，更新正式 evidence page。
+7. Research Orchestrator 從 evidence + raw sources 取 context，再交給各 agent。
 
 ### 7.5 審計與展示價值
 
@@ -668,9 +668,9 @@ LLMWiki-lite 是本專案的研究知識層。它不是取代 RAG，也不是完
 | curated source excerpts | `data/phison/sources/*.md` | Markdown |
 | demo run fixture | `data/phison/demo_run.json` | JSON |
 | evaluation rubric | `data/evaluation/rubric.json` | JSON |
-| research wiki pages | `knowledge/phison/pages/*.md` | Markdown |
-| wiki schema | `knowledge/FINANCE_WIKI.md` | Markdown |
-| wiki provenance | `knowledge/phison/provenance.json` | JSON |
+| research evidence pages | `knowledge/phison/pages/*.md` | Markdown |
+| evidence schema | `knowledge/EVIDENCE_PACK.md` | Markdown |
+| evidence provenance | `knowledge/phison/provenance.json` | JSON |
 | contradiction log | `knowledge/phison/Contradiction_Log.md` | Markdown |
 
 這樣可以讓 Flask API 在沒有 Supabase 的情況下先跑出完整 demo。
@@ -688,11 +688,11 @@ LLMWiki-lite 是本專案的研究知識層。它不是取代 RAG，也不是完
 | `reports` | 產生的研究報告 |
 | `evaluations` | 評估結果與 rubric 分數 |
 | `claims` | 報告中的重要主張與來源連結 |
-| `wiki_pages` | LLMWiki-lite 頁面 |
-| `wiki_claims` | Wiki 內的重要 claim 與 provenance |
+| `evidence_pages` | Evidence Pack 頁面 |
+| `evidence_claims` | Evidence 內的重要 claim 與 provenance |
 | `source_hashes` | 來源 hash 與 stale 檢查 |
 | `contradictions` | 矛盾與待 review 項目 |
-| `wiki_change_reviews` | 人工 review 紀錄 |
+| `evidence_change_reviews` | 人工 review 紀錄 |
 
 第一版若不需要登入，可以先不啟用 Supabase Auth。若之後要保存個人研究歷史，再加入使用者表與 row-level security。
 
@@ -707,7 +707,7 @@ LLMWiki-lite 是本專案的研究知識層。它不是取代 RAG，也不是完
 3. 逐項檢查來源、估值、產業、風險與使用者可用性。
 4. 若總分低於 4.0 / 5，標示低信心並列出需要補強的資料。
 5. 若出現反幻覺清單中的重大錯誤，直接判定不通過或要求重寫。
-6. 檢查重要主張是否已有 wiki provenance；若 claim 沒有來源或來源過期，扣分。
+6. 檢查重要主張是否已有 evidence provenance；若 claim 沒有來源或來源過期，扣分。
 
 第一版不需要追求完全自動化評分；可以讓 Evaluation Agent 產生可檢查的評分理由。
 
@@ -739,10 +739,10 @@ LLMWiki-lite 是本專案的研究知識層。它不是取代 RAG，也不是完
    - 建議：第一版網頁顯示 + 可下載 Markdown。
    - 後續可加 PDF 或 Obsidian export。
 
-7. **LLMWiki-lite 的第一版深度**
-   - 第一版只做群聯 7 個 wiki pages + provenance + contradiction log。
+7. **Evidence Pack 的第一版深度**
+   - 第一版只做群聯 7 個 evidence pages + provenance + contradiction log。
    - 暫不做完整 typed entity system；等資料超過 100 頁再考慮 BM25 / vector / SQLite / Supabase 搜尋升級。
 
 ## 12. 建議的下一步
 
-下一步是依照 `tasks.md` 進入實作。第一個實作里程碑應先完成本機資料 fixture、LLMWiki-lite 頁面與 deterministic backend pipeline，然後再做 Vue 展示介面。
+下一步是依照 `tasks.md` 進入實作。第一個實作里程碑應先完成本機資料 fixture、Evidence Pack 頁面與 deterministic backend pipeline，然後再做 Vue 展示介面。

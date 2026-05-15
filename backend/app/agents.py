@@ -115,23 +115,23 @@ class IntentRouter:
 
 
 class SourceRetrieval:
-    """Return curated sources and research wiki context."""
+    """Return curated sources and research evidence context."""
 
     def run(
         self,
         run_id: str,
         sources: list[dict[str, Any]],
-        wiki_pages: list[dict[str, str]],
+        evidence_pages: list[dict[str, str]],
         provenance: list[dict[str, Any]],
     ) -> AgentResult:
         source_ids = [source["id"] for source in sources]
 
         def work() -> tuple[str, dict[str, Any]]:
             return (
-                f"載入 {len(sources)} 筆 curated sources、{len(wiki_pages)} 個 wiki pages 與 {len(provenance)} 筆 provenance。",
+                f"載入 {len(sources)} 筆 curated sources、{len(evidence_pages)} 個 evidence pages 與 {len(provenance)} 筆 provenance。",
                 {
                     "source_count": len(sources),
-                    "wiki_page_count": len(wiki_pages),
+                    "evidence_page_count": len(evidence_pages),
                     "provenance_count": len(provenance),
                 },
             )
@@ -139,7 +139,7 @@ class SourceRetrieval:
         return timed_step(
             agent="source_retrieval",
             run_id=run_id,
-            input_summary="讀取 source catalog、source excerpts、wiki pages、provenance 與 contradiction log。",
+            input_summary="讀取 source catalog、source excerpts、evidence pages、provenance 與 contradiction log。",
             source_ids=source_ids,
             confidence=0.92,
             work=work,
@@ -260,7 +260,7 @@ class RiskAgent:
         return timed_step(
             agent="risk_agent",
             run_id=run_id,
-            input_summary="檢查 golden sample 反幻覺清單與 Risk_Register wiki page。",
+            input_summary="檢查 golden sample 反幻覺清單與 Risk_Register evidence page。",
             source_ids=["S3", "S4", "S5", "S6", "S8"],
             confidence=0.86,
             work=work,
@@ -296,17 +296,17 @@ class ReportGenerator:
                 {
                     "claim": "AI SSD / enterprise SSD 是群聯目前估值重估的主要敘事之一。",
                     "source_ids": ["S4", "S6"],
-                    "wiki_page": "Theme_AI_SSD.md",
+                    "evidence_page": "Theme_AI_SSD.md",
                 },
                 {
                     "claim": "2026 EPS 假設分散，估值支撐程度取決於採用哪個 EPS 情境。",
                     "source_ids": ["S4", "S5"],
-                    "wiki_page": "Valuation_EPS_Assumptions.md",
+                    "evidence_page": "Valuation_EPS_Assumptions.md",
                 },
                 {
                     "claim": "CMoney 與新聞摘要不是完整券商研報。",
                     "source_ids": ["S4", "S6", "S8"],
-                    "wiki_page": "Brokerage_View_Summary.md",
+                    "evidence_page": "Brokerage_View_Summary.md",
                 },
             ]
             return (
@@ -358,7 +358,7 @@ class EvaluationAgent:
             status = "passed" if total >= rubric["threshold"] and not hard_fail_hits else "needs_revision"
             notes = [
                 "有標示公開來源 proxy golden sample，不宣稱完整券商研報。",
-                f"已有 {provenance_count} 筆 wiki provenance 可追溯重要 claim。",
+                f"已有 {provenance_count} 筆 evidence provenance 可追溯重要 claim。",
                 "股票健診採 public fixture 保守輸出，缺資料時標示 unknown / not_available。",
                 "仍需後續補正式 Q1 財報、現金流、股利、籌碼與長期估值區間。",
             ]
@@ -377,7 +377,7 @@ class EvaluationAgent:
         return timed_step(
             agent="evaluation_agent",
             run_id=run_id,
-            input_summary="依 rubric、hard fail rules 與 wiki provenance 檢查報告品質。",
+            input_summary="依 rubric、hard fail rules 與 evidence provenance 檢查報告品質。",
             source_ids=[],
             confidence=0.88,
             work=work,
