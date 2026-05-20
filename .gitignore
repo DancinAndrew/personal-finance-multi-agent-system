@@ -25,6 +25,5 @@ build/
 *.log
 .cache/
 
-# External course materials: keep only the curated final-project summary used by this project.
-TAICA_AIASE2026-main/*
-!TAICA_AIASE2026-main/final_project_資訊整理.md
+# External course dump. Canonical final-project summary lives in docs/course-final-project.md.
+TAICA_AIASE2026-main/

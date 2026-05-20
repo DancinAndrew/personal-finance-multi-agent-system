@@ -1,6 +1,6 @@
 # AIASE 2026 Final Project 資訊整理
 
-整理日期：2026-05-09  
+整理日期：2026-05-09
 來源範圍：`TAICA_AIASE2026-main` 目前 repo 內的 Markdown 檔案，並輔以關鍵字掃描 Notebook。Notebook 命中多為教學範例與圖片資料，沒有發現比 `syllabus.md`、`README.md`、`W1.md`、`W3.md` 更明確的 final project 規定。
 
 ## 一句話結論

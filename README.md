@@ -2,17 +2,29 @@
 
 多代理個人投資 / 理財研究系統，第一版聚焦台股個股研究，預設標的為群聯電子（8299）。
 
-目前 repo 已進入第一版 MVP 實作。核心文件：
+目前 repo 已進入第一版 MVP 實作。這個 repo 採「文件入口集中、執行資料分層」的整理方式：產品規格、OpenSpec 變更、課程交付文件、runtime fixtures、Evidence Pack 各自保留責任邊界，但都可以從本 README 和 `docs/README.md` 找到。
 
-- `SPEC.md`：中文產品規格與 AIASE final project 對齊。
-- `openspec/changes/personal-finance-multi-agent-system/`：OpenSpec proposal、design、tasks 與需求規格。
-- `golden_samples/`：群聯公開來源 proxy golden sample。
-- `TAICA_AIASE2026-main/final_project_資訊整理.md`：課程 final project 要求整理。
-- `docs/statementdog-feature-benchmark.md`：財報狗個股分析與股票健診功能拆解，作為後續 AI 統整報告 benchmark。
-- `backend/`：Flask API 與 deterministic multi-agent pipeline。
-- `frontend/`：Vue 研究工作台。
-- `data/`：本機 source / price / evaluation fixtures。
-- `knowledge/`：Evidence Pack 研究頁、provenance 與 contradiction log。
+## 文件與 Ground Truth
+
+| 路徑 | 角色 | 什麼時候讀 |
+|---|---|---|
+| `docs/README.md` | 文件地圖與整理規則 | 不確定文件該放哪裡、或要找 ground truth 時先讀 |
+| `SPEC.md` | 產品範圍、使用者價值、MVP 行為的主要規格 | 判斷需求是否符合台股 / 群聯 / Evidence Pack / AIASE 方向 |
+| `openspec/changes/personal-finance-multi-agent-system/` | OpenSpec 變更提案、設計、任務與可測需求 | 實作或修改功能前讀，並在需求變更時同步更新 |
+| `docs/project-proposal.md` | 課程 / 展示用 proposal | 對外說明題目、使用者、outcome、scope |
+| `docs/course-final-project.md` | AIASE final project 要求整理 | 檢查課程交付物、評分面向、可執行 demo 風險 |
+| `docs/architecture.md` | 穩定架構與 agent workflow 圖 | 說明系統如何運作或更新架構圖時讀 |
+| `docs/api.md` | API endpoint、payload、錯誤與限制 | 修改 Flask API 或前端串接時讀 |
+| `docs/technical-report.md` | 技術報告草稿 | 課程 technical report 與系統設計說明 |
+| `docs/statementdog-feature-benchmark.md` | 財報狗 benchmark 拆解 | 擴充股票健診、財務分析、AI 統整報告時讀 |
+| `data/` | 本機 JSON / Markdown fixtures 與 source excerpts | deterministic pipeline 的輸入資料，不是一般說明文件 |
+| `knowledge/` | Evidence Pack 研究頁、provenance、contradiction log | 投資研究 claim 的可審計證據層 |
+| `golden_samples/` | 群聯公開來源 proxy golden sample | 評估報告結構、來源引用與反幻覺能力 |
+| `slides/` | Demo presentation outline | 準備展示與口頭 demo |
+| `AGENTS.md` | Codex / agent 開發規則 | 任何代理開始改 repo 前都應先讀 |
+| `.agents/` | Project-local Everything Claude Code / ECC skills 與 rules | 需要 coding、testing、API、security、verification 等開發規則時讀 |
+
+原本的課程整理已從 `TAICA_AIASE2026-main/final_project_資訊整理.md` 合併到 `docs/course-final-project.md`；`docs/proposal.md` 也改名為 `docs/project-proposal.md`，避免和 OpenSpec 的 `proposal.md` 混淆。`TAICA_AIASE2026-main/` 若仍存在，視為外部課程材料 dump，不是本 repo 的 canonical project docs。
 
 第一版實作邊界：
 
@@ -22,6 +34,14 @@
 - 手動股價或使用者輸入，不接即時行情 API。
 - Evidence Pack：群聯 7 個 evidence pages + provenance + contradiction log。
 - 不先接 Supabase、真實 LLM、爬蟲或外部行情 API。
+
+開發時的 ground truth 順序：
+
+1. 先讀 `AGENTS.md` 和 `docs/README.md` 確認文件邊界。
+2. 用 `SPEC.md` 判斷產品和課程方向。
+3. 用 `openspec/changes/personal-finance-multi-agent-system/` 判斷當前實作需求與驗收條件。
+4. 修改 API、架構、報告或展示時，同步更新 `docs/` 對應文件。
+5. 修改研究資料或投資 claim 時，以 `data/` 與 `knowledge/` 的 source / Evidence Pack / provenance 為準。
 
 ## 本機啟動
 

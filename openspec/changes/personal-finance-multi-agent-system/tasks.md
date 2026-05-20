@@ -1,7 +1,7 @@
 # Tasks：多代理個人投資 / 理財系統 MVP
 
-狀態：草稿 v0.1  
-對應設計：`openspec/changes/personal-finance-multi-agent-system/design.md`  
+狀態：草稿 v0.1
+對應設計：`openspec/changes/personal-finance-multi-agent-system/design.md`
 第一版範圍：本機 fixture、mock / deterministic agents、手動股價、群聯 7 頁 Evidence Pack
 
 > 這份任務清單是實作前的工作拆解。每個階段都應能獨立驗收，避免一開始就接 Supabase、即時行情 API、爬蟲或真實 LLM。
@@ -144,7 +144,7 @@
 ## 9. 展示與文件
 
 - [x] 更新 README，說明專案目的、架構、啟動方式、資料限制。
-- [x] 建立 `docs/proposal.md`，說明題目、使用者場景、quality-of-life 價值、outcome 與 scope。
+- [x] 建立 `docs/project-proposal.md`，說明題目、使用者場景、quality-of-life 價值、outcome 與 scope。
 - [x] 建立 `docs/architecture.md`，放入系統架構圖、服務流程圖、agent workflow 與 Evidence Pack 知識層。
 - [x] 建立 `docs/api.md`，記錄 API endpoint、request / response、錯誤處理與資料限制。
 - [x] 建立 `docs/technical-report.md`，整理系統設計、資料來源、模型 / agent 設計、evaluation、風險與未來工作。

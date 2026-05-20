@@ -1,8 +1,8 @@
 # Design：多代理個人投資 / 理財系統
 
-狀態：草稿 v0.3  
-對應 SPEC：`/Users/andrew-ideaslab/Documents/New project/SPEC.md`  
-OpenSpec 變更：`personal-finance-multi-agent-system`  
+狀態：草稿 v0.3
+對應 SPEC：`SPEC.md`
+OpenSpec 變更：`personal-finance-multi-agent-system`
 
 > 這份設計先回答「第一版要怎麼做得出來、看得見、能評估」。它不是最終 implementation plan；確認方向後才進入 `tasks.md`。
 

@@ -1,7 +1,7 @@
 # 規格：多代理個人投資 / 理財系統
 
-狀態：草稿 v1.0  
-OpenSpec 變更：`personal-finance-multi-agent-system`  
+狀態：草稿 v1.0
+OpenSpec 變更：`personal-finance-multi-agent-system`
 來源：`/Users/andrew-ideaslab/Documents/Obsidian/03_Resources/Career/0507 Chris 諮詢.md`
 
 > [!important]
@@ -160,7 +160,7 @@ OpenSpec 變更：`personal-finance-multi-agent-system`
 
 課程整理來源：
 
-- `TAICA_AIASE2026-main/final_project_資訊整理.md`
+- `docs/course-final-project.md`
 
 目前 SPEC 與課程要求的對齊如下：
 
