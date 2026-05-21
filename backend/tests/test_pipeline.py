@@ -12,12 +12,28 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 VALID_HEALTH_STATUSES = {"pass", "fail", "unknown", "not_available"}
 VALID_FUNDAMENTAL_STATUSES = {"available", "partial", "missing", "not_available"}
 VALID_VALUATION_STATUSES = {"available", "partial", "missing", "not_available"}
+VALID_CHIP_COVERAGE_STATUSES = {"available", "partial", "missing", "not_available"}
+VALID_CHIP_SIGNAL_BIASES = {
+    "bullish",
+    "bearish",
+    "neutral",
+    "mixed",
+    "unknown",
+    "not_available",
+}
 EXPECTED_FUNDAMENTAL_CATEGORY_IDS = {
     "revenue",
     "profitability",
     "safety",
     "growth",
     "cash_flow_quality",
+}
+EXPECTED_CHIP_SIGNAL_IDS = {
+    "broker_branch_flow",
+    "major_shareholders",
+    "director_holdings",
+    "director_pledges",
+    "shareholder_count",
 }
 
 
@@ -167,6 +183,46 @@ class FileStoreTests(unittest.TestCase):
         for target in snapshot["broker_targets"]:
             self.assertTrue(set(target["source_ids"]).issubset(source_ids))
 
+    def test_chip_fixture_has_required_shape(self) -> None:
+        snapshot = self.store.load_chip_fixture()
+        self.assertEqual(snapshot["data_policy"], "public_fixture_only")
+        self.assertEqual(len(snapshot["signals"]), 5)
+        self.assertEqual(
+            {signal["id"] for signal in snapshot["signals"]},
+            EXPECTED_CHIP_SIGNAL_IDS,
+        )
+
+        required_top_level = {"as_of_date", "data_policy", "signals", "missing_data"}
+        self.assertTrue(required_top_level.issubset(snapshot.keys()))
+        signal_required = {
+            "id",
+            "name",
+            "coverage_status",
+            "signal_bias",
+            "source_ids",
+            "lookback_window",
+            "summary",
+            "missing_data",
+            "data_policy",
+        }
+        for signal in snapshot["signals"]:
+            self.assertTrue(signal_required.issubset(signal.keys()))
+            self.assertIn(signal["coverage_status"], VALID_CHIP_COVERAGE_STATUSES)
+            self.assertIn(signal["signal_bias"], VALID_CHIP_SIGNAL_BIASES)
+            self.assertIsInstance(signal["source_ids"], list)
+            self.assertIsInstance(signal["missing_data"], list)
+            if signal["coverage_status"] == "missing":
+                self.assertEqual(signal["signal_bias"], "unknown")
+                self.assertGreater(len(signal["missing_data"]), 0)
+            if signal["coverage_status"] == "not_available":
+                self.assertEqual(signal["signal_bias"], "not_available")
+                self.assertGreater(len(signal["missing_data"]), 0)
+
+    def test_chip_fixture_source_ids_reference_catalog(self) -> None:
+        source_ids = {source["id"] for source in self.store.load_source_catalog()}
+        for signal in self.store.load_chip_fixture()["signals"]:
+            self.assertTrue(set(signal["source_ids"]).issubset(source_ids))
+
 
 class OrchestratorTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -175,9 +231,10 @@ class OrchestratorTests(unittest.TestCase):
     def test_default_run_contains_trace_report_and_evaluation(self) -> None:
         result = self.orchestrator.run_default()
         self.assertEqual(result["run"]["status"], "completed")
-        self.assertEqual(len(result["steps"]), 9)
+        self.assertEqual(len(result["steps"]), 10)
         self.assertIn("health_check_agent", [step["agent"] for step in result["steps"]])
         self.assertIn("valuation_agent", [step["agent"] for step in result["steps"]])
+        self.assertIn("chip_agent", [step["agent"] for step in result["steps"]])
         self.assertIn("evidence", result)
         self.assertNotIn("wiki", result)
         self.assertIn("report_markdown", result["report"])
@@ -228,6 +285,31 @@ class OrchestratorTests(unittest.TestCase):
         self.assertTrue(
             any("AI SSD" in item and "支撐目前估值" in item for item in valuation["interpretation"])
         )
+
+    def test_default_run_contains_chip_analysis(self) -> None:
+        result = self.orchestrator.run_default()
+        chip = result["analysis"]["chip"]
+        self.assertEqual(chip["summary"]["data_policy"], "public_fixture_only")
+        self.assertEqual(chip["summary"]["signals_total"], 5)
+        self.assertEqual(chip["summary"]["coverage"]["missing"], 4)
+        self.assertEqual(chip["summary"]["coverage"]["not_available"], 1)
+        self.assertEqual(chip["summary"]["overall_signal"], "not_evaluable")
+        self.assertEqual(len(chip["signals"]), 5)
+        self.assertEqual({signal["id"] for signal in chip["signals"]}, EXPECTED_CHIP_SIGNAL_IDS)
+        self.assertIn("分點買賣超", "、".join(chip["data_gaps"]))
+        self.assertIn("董監質押", "、".join(chip["data_gaps"]))
+        self.assertIn("股東人數", "、".join(chip["data_gaps"]))
+        self.assertTrue(
+            any("不能用籌碼面支持或反駁" in item for item in chip["interpretation"])
+        )
+
+    def test_health_check_consumes_chip_without_passing_chip_signal(self) -> None:
+        result = self.orchestrator.run_default()
+        health_checks = result["analysis"]["health_checks"]
+        chip_check = next(check for check in health_checks["checks"] if check["id"] == "chip_signal")
+        self.assertEqual(chip_check["status"], "not_available")
+        self.assertIn("chip_signal", health_checks["summary"]["chip_alignment"])
+        self.assertIn("not_evaluable", health_checks["summary"]["chip_alignment"]["chip_signal"])
 
     def test_price_override_changes_valuation_scenarios(self) -> None:
         default = self.orchestrator.run_default()
@@ -314,6 +396,18 @@ class OrchestratorTests(unittest.TestCase):
             "Forward P/E 證明便宜",
             "CMoney 完整券商模型",
         ]
+        for phrase in forbidden:
+            self.assertNotIn(phrase, report)
+
+    def test_report_contains_chip_summary(self) -> None:
+        report = self.orchestrator.run_default()["report"]["report_markdown"]
+        self.assertIn("籌碼面摘要", report)
+        for label in ["分點籌碼", "大股東持股", "董監持股", "董監質押", "股東人數"]:
+            self.assertIn(label, report)
+        self.assertIn("not_evaluable", report)
+        self.assertIn("不是財報狗登入", report)
+        self.assertIn("不是財報狗登入 / 付費資料、券商分點資料或即時籌碼 API", report)
+        forbidden = ["籌碼轉強", "主力進場", "大股東增加", "散戶下降"]
         for phrase in forbidden:
             self.assertNotIn(phrase, report)
 
@@ -426,6 +520,44 @@ class OrchestratorTests(unittest.TestCase):
         self.assertLess(result.payload["total_score"], 4.0)
         self.assertIn("valuation_overclaim", result.payload["hard_fail_hits"])
 
+    def test_evaluation_flags_missing_chip_summary(self) -> None:
+        store = FileStore(REPO_ROOT)
+        result = EvaluationAgent().run(
+            "run_missing_chip",
+            (
+                "# 群聯電子（8299）研究輔助報告\n\n"
+                "## 估值拆解\n\n"
+                "示範股價日期：2026-05-10；非即時行情；券商目標價區間。"
+                "\n\n## 股票健診摘要\n\n"
+                + "\n".join(f"- {check['name']}" for check in store.load_health_checks())
+                + "\n\n## 基本面拆解\n\n"
+                "營收 partial；獲利能力 partial；安全性 missing；成長力 partial；現金流品質 missing。"
+            ),
+            store.load_rubric(),
+            provenance_count=5,
+            health_checks={"summary": {"total": 7}, "checks": store.load_health_checks()},
+            fundamentals={"categories": store.load_fundamental_metrics()["categories"]},
+            valuation={"summary": {"major_gaps": ["P/B", "殖利率", "歷史 P/E percentile"]}},
+            chip={"summary": {"signals_total": 5}, "signals": store.load_chip_fixture()["signals"]},
+        )
+        self.assertLess(result.payload["total_score"], 4.0)
+        self.assertEqual(result.payload["status"], "needs_revision")
+
+    def test_evaluation_flags_chip_overclaim(self) -> None:
+        store = FileStore(REPO_ROOT)
+        result = EvaluationAgent().run(
+            "run_bad_chip",
+            "籌碼面摘要：主力進場，分點買超，大股東增加，籌碼轉強。",
+            store.load_rubric(),
+            provenance_count=5,
+            health_checks={"summary": {"total": 7}, "checks": store.load_health_checks()},
+            fundamentals={"categories": store.load_fundamental_metrics()["categories"]},
+            valuation={"summary": {"coverage": {"partial": 2, "missing": 4}}},
+            chip={"summary": {"signals_total": 5}, "signals": store.load_chip_fixture()["signals"]},
+        )
+        self.assertLess(result.payload["total_score"], 4.0)
+        self.assertIn("chip_overclaim", result.payload["hard_fail_hits"])
+
 
 class FlaskApiTests(unittest.TestCase):
     def test_health_endpoint_when_flask_is_available(self) -> None:
@@ -463,6 +595,9 @@ class FlaskApiTests(unittest.TestCase):
         self.assertIn("valuation", data["analysis"])
         self.assertEqual(len(data["analysis"]["valuation"]["scenarios"]), 6)
         self.assertFalse(data["analysis"]["valuation"]["summary"]["is_live_market_data"])
+        self.assertIn("chip", data["analysis"])
+        self.assertEqual(len(data["analysis"]["chip"]["signals"]), 5)
+        self.assertEqual(data["analysis"]["chip"]["summary"]["overall_signal"], "not_evaluable")
 
     def test_missing_run_returns_404_when_flask_is_available(self) -> None:
         try:
