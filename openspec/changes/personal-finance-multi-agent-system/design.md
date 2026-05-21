@@ -1,10 +1,10 @@
-# Design：多代理個人投資 / 理財系統
+# 設計：多代理個人投資 / 理財系統
 
 狀態：草稿 v0.3
 對應 SPEC：`SPEC.md`
 OpenSpec 變更：`personal-finance-multi-agent-system`
 
-> 這份設計先回答「第一版要怎麼做得出來、看得見、能評估」。它不是最終 implementation plan；確認方向後才進入 `tasks.md`。
+> 這份設計先回答「第一版要怎麼做得出來、看得見、能評估」。它不是最終實作計畫；確認方向後才進入 `tasks.md`。
 
 ## 1. 已決策技術方向
 
@@ -329,7 +329,7 @@ Health Check Agent 必須在 Fundamental Agent 之後、Risk Agent 之前執行�
 
 Agent step 的 `output_summary` 必須包含檢核總數與缺口概況，例如：「完成 7 種股票健診框架，0 pass、0 fail、6 unknown、1 not_available；主要缺口為現金流、股利、籌碼與長期估值區間。」
 
-#### 6.1.6 Report integration
+#### 6.1.6 報告整合
 
 Report Generator 必須新增「股票健診摘要」段落，至少包含：
 
@@ -344,7 +344,7 @@ Report Generator 必須新增「股票健診摘要」段落，至少包含：
 - 把 `not_available` 寫成「尚可」或「資料良好」。
 - 因為 health check 缺資料就跳過該段落；缺資料本身就是輸出的一部分。
 
-#### 6.1.7 Frontend integration
+#### 6.1.7 前端整合
 
 前端應在既有 detail panel 新增 `Health` tab：
 
@@ -354,9 +354,9 @@ Report Generator 必須新增「股票健診摘要」段落，至少包含：
 - 在 summary band 可顯示 health-check gap summary，例如 `Health gaps: 6 unknown / 1 N/A`。
 - mobile viewport 下不得因 criteria 或 missing data 文字過長而溢出。
 
-#### 6.1.8 Evaluation integration
+#### 6.1.8 評估整合
 
-Evaluation Agent 必須新增 health-check 完整性與資料誠實度檢查：
+Evaluation Agent 必須新增股票健診完整性與資料誠實度檢查：
 
 - 若報告缺少「股票健診摘要」，應降分或標 `needs_revision`。
 - 若七種健診沒有全部出現，應降分。
@@ -485,7 +485,7 @@ Health Check Agent 應可讀取擴充後的 fundamentals payload：
 - `value_stock` 仍以 Valuation Agent 未完成為資料缺口，不應把 Forward P/E 情境當完整便宜股判定。
 - Health Check 不應直接重新計算 fundamental metrics；它只消費 Fundamental Agent 的輸出與 fixture。
 
-#### 6.2.7 Report integration
+#### 6.2.7 報告整合
 
 Report Generator 必須新增或擴充「基本面拆解」段落，至少包含：
 
@@ -501,7 +501,7 @@ Report Generator 必須新增或擴充「基本面拆解」段落，至少包含
 - 因為 Forward P/E 看起來較低就宣稱公司便宜。
 - 把缺資料的 `safety` 或 `cash_flow_quality` 寫成已確認健康。
 
-#### 6.2.8 Frontend integration
+#### 6.2.8 前端整合
 
 前端應新增或擴充 `Fundamentals` view：
 
@@ -510,9 +510,9 @@ Report Generator 必須新增或擴充「基本面拆解」段落，至少包含
 - `partial` / `missing` 必須視覺上和 `available` 不同。
 - 不應把 valuation scenarios 和 fundamentals categories 混成同一張表；兩者可在同一 tab 但要分區。
 
-#### 6.2.9 Evaluation integration
+#### 6.2.9 評估整合
 
-Evaluation Agent 必須新增 fundamental coverage 檢查：
+Evaluation Agent 必須新增基本面資料覆蓋度檢查：
 
 - 若 report 缺少五大面向的基本面拆解，應降分或標 `needs_revision`。
 - 若 report 把 partial / missing metric 寫成已確認，應 hard fail。
@@ -637,7 +637,7 @@ Valuation Agent 使用和 Fundamental Agent 一樣的 coverage status，但語�
 
 Agent step 的 `output_summary` 應說明估值覆蓋度，例如：「建立 Forward P/E 與券商目標價敏感度；2 partial、3 missing；主要缺口為歷史 P/E percentile、P/B、殖利率與同業估值。」
 
-#### 6.3.6 Pipeline dependency
+#### 6.3.6 流程相依性
 
 Valuation Agent 應在 Fundamental Agent 之後、Health Check Agent 之前或之後執行，實作時要明確選擇：
 
@@ -646,7 +646,7 @@ Valuation Agent 應在 Fundamental Agent 之後、Health Check Agent 之前或�
 
 建議第一版放在 Fundamental Agent 之後、Health Check Agent 之前，因為 Health Check 的 `value_stock` 目前缺估值資料，可以自然改為消費 Valuation Agent output，但仍不得把 Forward P/E 情境當成便宜股通過。
 
-#### 6.3.7 Report integration
+#### 6.3.7 報告整合
 
 Report Generator 必須新增或擴充「估值拆解」段落，至少包含：
 
@@ -663,7 +663,7 @@ Report Generator 必須新增或擴充「估值拆解」段落，至少包含：
 - 把 Forward P/E 看起來較低寫成股票便宜。
 - 把新聞摘要當完整券商模型。
 
-#### 6.3.8 Frontend integration
+#### 6.3.8 前端整合
 
 前端應新增或擴充 `Valuation` view：
 
@@ -672,9 +672,9 @@ Report Generator 必須新增或擴充「估值拆解」段落，至少包含：
 - Valuation view 可與 Fundamentals view 分開，避免使用者把基本面資料覆蓋與估值結論混在一起。
 - 若 price 是 fixture，UI 必須顯示「非即時行情」。
 
-#### 6.3.9 Evaluation integration
+#### 6.3.9 評估整合
 
-Evaluation Agent 必須新增 valuation overclaim guardrail：
+Evaluation Agent 必須新增估值過度宣稱防護：
 
 - 若 report 缺少「估值拆解」，應降分或標 `needs_revision`。
 - 若 report 把單一目標價當合理價或買進建議，應 hard fail。
@@ -748,7 +748,7 @@ Evidence Pack 是本專案的研究證據層。它不是取代 RAG，也不是�
 
 第一版只保存摘要與來源，不保存完整 chain-of-thought 或冗長中間輸出。
 
-### 8.1 Research Run
+### 8.1 研究任務（Research Run）
 
 ```json
 {
@@ -766,7 +766,7 @@ Evidence Pack 是本專案的研究證據層。它不是取代 RAG，也不是�
 }
 ```
 
-### 8.2 Agent Step
+### 8.2 代理步驟（Agent Step）
 
 ```json
 {
@@ -783,7 +783,7 @@ Evidence Pack 是本專案的研究證據層。它不是取代 RAG，也不是�
 }
 ```
 
-### 8.3 Source Reference
+### 8.3 來源引用（Source Reference）
 
 ```json
 {
@@ -797,7 +797,7 @@ Evidence Pack 是本專案的研究證據層。它不是取代 RAG，也不是�
 }
 ```
 
-### 8.4 Evaluation Result
+### 8.4 評估結果（Evaluation Result）
 
 ```json
 {
@@ -842,7 +842,7 @@ Evidence Pack 是本專案的研究證據層。它不是取代 RAG，也不是�
 
 若第一版需要保存研究歷史，使用 Supabase Cloud。暫定表如下：
 
-| Table | 用途 |
+| 資料表 | 用途 |
 |---|---|
 | `research_runs` | 一次研究任務 |
 | `agent_steps` | 每個 agent 的執行摘要 |
@@ -859,7 +859,7 @@ Evidence Pack 是本專案的研究證據層。它不是取代 RAG，也不是�
 
 第一版若不需要登入，可以先不啟用 Supabase Auth。若之後要保存個人研究歷史，再加入使用者表與 row-level security。
 
-## 10. Evaluation 設計
+## 10. 評估設計
 
 第一版採 rubric-based evaluation，proxy golden sample 作為人工與半自動比對基準。
 
@@ -876,7 +876,7 @@ Evidence Pack 是本專案的研究證據層。它不是取代 RAG，也不是�
 
 ## 11. 已決策與延後事項
 
-以下為第一版 implementation 的已決策邊界與延後事項：
+以下為第一版實作的已決策邊界與延後事項：
 
 1. **LLM provider**
    - 第一版使用 mock / deterministic agents。

@@ -1,4 +1,4 @@
-# Tasks：多代理個人投資 / 理財系統 MVP
+# 任務：多代理個人投資 / 理財系統 MVP
 
 狀態：草稿 v0.1
 對應設計：`openspec/changes/personal-finance-multi-agent-system/design.md`
@@ -6,7 +6,7 @@
 
 > 這份任務清單是實作前的工作拆解。每個階段都應能獨立驗收，避免一開始就接 Supabase、即時行情 API、爬蟲或真實 LLM。
 
-## 0. Implementation 前提
+## 0. 實作前提
 
 - [x] 第一版先不接 Supabase，只用本機 Markdown / JSON fixture。
 - [x] 第一版先不用真實 LLM，採 mock / deterministic agents。
@@ -273,14 +273,14 @@
 - 使用者不需要打開財報狗多個頁面，也能看到系統知道哪些健診還不能判斷。
 - 報告的 health check 段落能支援後續補資料與再評估。
 
-### 11.7 Evaluation Agent
+### 11.7 評估代理（Evaluation Agent）
 
 - [x] rubric 新增或擴充 health-check completeness / data-gap honesty 的評分面向。
 - [x] 若報告缺少「股票健診摘要」，evaluation 應降分或標示 `needs_revision`。
 - [x] 若七種健診沒有全部出現，evaluation 應降分。
 - [x] 若報告宣稱已使用財報狗付費 / 登入資料，但 fixture 沒有該資料，evaluation 應 hard fail。
 - [x] 若報告把 `unknown` 或 `not_available` 說成已通過、已失敗或完整驗證，evaluation 應 hard fail。
-- [x] Evaluation notes 應說明目前主要缺口，例如現金流、股利、籌碼、P/B、F-score、歷史估值區間。
+- [x] 評估說明應列出目前主要缺口，例如現金流、股利、籌碼、P/B、F-score、歷史估值區間。
 
 驗收標準：
 
@@ -454,7 +454,7 @@
 - Health Check 與 Fundamental Agent 的責任不重疊。
 - 股票健診的缺口和基本面資料缺口一致，不互相矛盾。
 
-### 12.9 Evaluation Agent
+### 12.9 評估代理（Evaluation Agent）
 
 - [x] rubric 新增或擴充 fundamental coverage / overclaim guardrail。
 - [x] 若 report 缺少五大面向基本面拆解，evaluation 應降分或標 `needs_revision`。
@@ -507,7 +507,7 @@
 - [ ] 新增 Chip Agent，覆蓋分點、董監持股、董監質押、大股東持股與股東人數。
 - [ ] 新增 Technical Agent，補足財報狗較少覆蓋的價格、量能、動能與技術面。
 - [ ] 新增 Synthesis Agent，將消息面、基本面、技術面、籌碼面、估值面與風險面合成完整研究報告。
-- [ ] 擴充 Evaluation Agent，檢查報告是否涵蓋 thesis、最新變化、健診摘要、反方觀點、資料缺口、追蹤指標、來源與信心。
+- [ ] 擴充 Evaluation Agent，檢查報告是否涵蓋投資論點、最新變化、健診摘要、反方觀點、資料缺口、追蹤指標、來源與信心。
 
 驗收標準：
 
@@ -617,7 +617,7 @@
 ### 13.8 Report Generator
 
 - [ ] 報告新增或擴充「估值拆解」段落。
-- [ ] 段落必須列出示範股價日期、Forward P/E scenarios、broker target range、missing valuation data。
+- [ ] 段落必須列出示範股價日期、Forward P/E 情境、券商目標價區間與估值缺口資料。
 - [ ] 報告必須標示 EPS / target price / upside 是情境敏感度，不等同合理價或買賣建議。
 - [ ] 報告不得把單一目標價寫成合理價。
 - [ ] 報告不得把 Forward P/E 寫成股票便宜的完整證明。
@@ -628,21 +628,21 @@
 - 使用者能看到「如果採不同 EPS 假設，估值支撐程度會如何改變」。
 - 報告能清楚列出 P/B、殖利率、歷史估值與同業估值缺口。
 
-### 13.9 Evaluation Agent
+### 13.9 評估代理（Evaluation Agent）
 
-- [ ] rubric 新增或擴充 valuation overclaim guardrail。
-- [ ] 若 report 缺少「估值拆解」，evaluation 應降分或標 `needs_revision`。
-- [ ] 若 report 把單一目標價當合理價或買進建議，evaluation 應 hard fail。
-- [ ] 若 report 使用 fixture price 但沒有日期或非即時行情提醒，evaluation 應 hard fail 或重大扣分。
-- [ ] 若 report 把 Forward P/E 情境寫成股票便宜的完整證明，evaluation 應 hard fail。
-- [ ] 若 report 清楚列出 target range、EPS sensitivity、price date 與缺口，evaluation 應提高 valuation rigor / user usefulness。
+- [ ] rubric 新增或擴充估值過度宣稱防護。
+- [ ] 若報告缺少「估值拆解」，評估應降分或標 `needs_revision`。
+- [ ] 若報告把單一目標價當合理價或買進建議，評估應 hard fail。
+- [ ] 若報告使用 fixture price 但沒有日期或非即時行情提醒，評估應 hard fail 或重大扣分。
+- [ ] 若報告把 Forward P/E 情境寫成股票便宜的完整證明，評估應 hard fail。
+- [ ] 若報告清楚列出目標價區間、EPS 敏感度、股價日期與缺口，評估應提高 valuation rigor / user usefulness。
 
 驗收標準：
 
-- evaluation 能抓出「用目標價或 Forward P/E 代替完整估值」的錯誤。
-- evaluation 能獎勵誠實列出估值缺口的報告。
+- 評估能抓出「用目標價或 Forward P/E 代替完整估值」的錯誤。
+- 評估能獎勵誠實列出估值缺口的報告。
 
-### 13.10 Frontend
+### 13.10 前端
 
 - [ ] detail panel 新增 `Valuation` tab，或在既有 detail panel 中新增 valuation view。
 - [ ] Valuation view 顯示 price fixture date、scenario table、broker target table、coverage status、source IDs、data gaps。

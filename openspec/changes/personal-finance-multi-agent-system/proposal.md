@@ -1,46 +1,49 @@
-## Why
+## 為什麼
 
-The project needs a clear spec-first path for a multi-agent personal investment and finance research system, grounded in the Chris mentorship note. The first goal is to define testable behavior before choosing frameworks, data stores, UI, or deployment.
+這個專案需要用 spec-first 的方式，先把「multi-agent 個人投資 / 理財研究系統」的行為定義清楚，再決定技術細節、資料庫、UI 或部署方式。第一版需求來自 Chris 諮詢筆記與使用者想學台股投資的目標，因此重點不是做通用投資聊天機器人，而是做一個可展示、可驗證、對使用者真實研究群聯有幫助的台股研究工作台。
 
-## What Changes
+OpenSpec 文件預設使用繁體中文撰寫。若因 OpenSpec 格式需要保留 `Requirement`、`Scenario`、`WHEN`、`THEN`、`AND` 等英文結構標記，標記可保留英文，但標題內容、說明與驗收語意都應使用中文。
 
-- Add a new capability for a multi-agent investment research system.
-- Define the MVP behavior for intent routing, specialist agents, traceable retrieval, cost / latency control, evaluation, and human decision boundaries.
-- Scope the first MVP to Taiwan equities instead of broad global investing or portfolio management.
-- Use Phison Electronics (8299) as the first seed target, grounded in the user's existing Obsidian research note.
-- Make the MVP a demoable web application.
-- Show an observable agent execution trace in the web application.
-- Store only summaries and sources for first-version agent traces, not full intermediate outputs.
-- Use news and financial reports as the first primary data sources.
-- Start with a manually curated dataset, with crawlers or Exa API as future extensions.
-- Add an Evidence Pack research knowledge layer so raw sources can be compiled into human-readable, linkable, provenance-backed evidence pages before agent analysis.
-- Set the initial evaluation pass threshold to 4.0 / 5.
-- Prefer an external brokerage research report as the primary golden sample, but start with a clearly labeled public-source proxy golden sample when the user does not have broker access.
-- Use "whether the AI SSD growth story supports Phison's current valuation" as the first research question.
-- Add StatementDog-style dashboard and stock health-check benchmarking as a product reference, while requiring the system to synthesize scattered indicators into an AI research report instead of leaving users to inspect dashboards manually.
-- Add a second-phase minimum slice for a conservative Health Check Agent that converts the seven StatementDog-style stock health-check perspectives into auditable `pass`, `fail`, `unknown`, or `not_available` outputs.
-- Require the Health Check Agent to mark missing, paywalled, login-gated, or unverified data as gaps instead of fabricating completed checks.
-- Keep the second-phase slice local and deterministic: no Supabase, real LLM, crawler, Exa API, live market data, StatementDog login, or paid data dependency.
-- Add the next second-phase slice for a deeper Fundamental Agent that turns revenue, profitability, safety, growth, and cash-flow quality metrics into a structured financial snapshot with explicit source coverage and missing-data gaps.
-- Preserve the existing EPS / Forward P/E scenarios while separating them from broader fundamental quality analysis so valuation sensitivity does not pretend to cover full business quality.
-- Add the next docs-first slice for a Valuation Agent that separates valuation analysis from fundamental quality, covering earnings multiples, broker target ranges, scenario sensitivity, and missing P/B, dividend-yield, and historical valuation data.
-- Require the Valuation Agent to treat target prices and Forward P/E outputs as assumptions, not as fair-value proof, buy recommendations, or evidence that the stock is cheap.
+## 變更內容
 
-## Capabilities
+- 新增一個 multi-agent 投資研究系統能力。
+- 定義 MVP 的行為：意圖路由、專家代理、可追溯資料檢索、成本 / 延遲控制、評估流程與人類決策邊界。
+- 將第一版 MVP 範圍限定在台股，而不是全球投資、完整資產配置或泛用理財。
+- 使用群聯電子（8299）作為第一個 seed target，並連接使用者既有的 Obsidian 研究筆記。
+- 將 MVP 做成可展示的網頁應用。
+- 在網頁應用中展示可觀察的代理執行軌跡。
+- 第一版 agent trace 只儲存摘要與來源，不儲存完整 intermediate outputs。
+- 第一版主要資料來源以新聞與財報 / 財務資訊為主。
+- 第一版先使用手動 curated dataset，crawler 或 Exa API 留到後續延伸。
+- 新增 Evidence Pack 研究證據層，讓 raw sources 先整理成人可讀、可連結、可稽核、有 provenance 的 evidence pages，再交給 agents 使用。
+- 設定第一版 evaluation 通過門檻為 4.0 / 5。
+- 優先以外部券商研究報告作為 golden sample；若使用者沒有券商報告，先使用清楚標示為 proxy 的公開來源 golden sample。
+- 將第一個研究問題設定為：「AI SSD 成長故事是否足以支撐群聯目前估值」。
+- 將財報狗 / StatementDog 式 dashboard 與股票健診作為產品 benchmark，但系統目標是合成 AI 研究報告，而不是讓使用者自己逐頁看 dashboard。
+- 新增第二階段最小切片：保守 Health Check Agent，將七種 StatementDog-style 股票健診角度轉成可稽核的 `pass`、`fail`、`unknown`、`not_available` 輸出。
+- 要求 Health Check Agent 遇到缺資料、付費資料、登入資料或不可驗證資料時，必須標示資料缺口，不得假裝已完成檢核。
+- 第二階段切片維持本機 deterministic：不依賴 Supabase、真實 LLM、crawler、Exa API、即時行情、StatementDog 登入或付費資料。
+- 新增下一個第二階段切片：Fundamental Agent 擴充，將營收、獲利能力、安全性、成長力、現金流品質整理成 structured financial snapshot，並清楚標示來源覆蓋與 missing-data gaps。
+- 保留既有 EPS / Forward P/E 情境，但將它和完整基本面品質分析分開，避免估值敏感度被誤解成完整基本面研究。
+- 新增下一個 docs-first 切片：Valuation Agent，將估值分析從基本面品質中分離，覆蓋 earnings multiples、券商目標價區間、情境敏感度，以及 P/B、殖利率、歷史估值資料缺口。
+- 要求 Valuation Agent 將目標價與 Forward P/E 視為假設與情境敏感度，而不是合理價證明、買進建議或股票便宜的證據。
 
-### New Capabilities
+## 能力範圍
 
-- `personal-finance-multi-agent-system`: Defines the behavior of a decision-support research system for Taiwan equity investing, including routing, specialist agents, source grounding, evaluation, and safety boundaries.
-- `stock-health-check-agent`: Defines conservative stock health-check behavior for seven investment lenses, including explicit data-gap handling and integration into the report, trace, and evaluation workflow.
-- `fundamental-analysis-agent`: Defines deterministic fundamental-analysis behavior for revenue, profitability, safety, growth, and cash-flow quality, including metric coverage status and report integration.
-- `valuation-analysis-agent`: Defines deterministic valuation-analysis behavior for Phison using public fixtures, explicit valuation coverage statuses, scenario sensitivity, source-backed broker target ranges, and overclaim guardrails.
+### 新增能力
 
-### Modified Capabilities
+- `personal-finance-multi-agent-system`：定義台股投資研究輔助系統的行為，包括路由、專家 agents、來源 grounding、evaluation 與安全邊界。
+- `stock-health-check-agent`：定義七種投資視角的保守股票健診行為，包括資料缺口處理，以及如何整合到報告、trace 與 evaluation。
+- `fundamental-analysis-agent`：定義 deterministic 基本面分析行為，覆蓋營收、獲利能力、安全性、成長力與現金流品質，並包含 metric coverage status 與報告整合方式。
+- `valuation-analysis-agent`：定義 deterministic 估值分析行為，使用 public fixtures、明確 valuation coverage status、情境敏感度、source-backed broker target ranges 與 overclaim guardrails。
 
-None.
+### 修改能力
 
-## Impact
+目前沒有修改既有能力，而是在同一個 active change 中逐步擴充 MVP 能力。
 
-- New OpenSpec change: `personal-finance-multi-agent-system`
-- New discussion artifact: `SPEC.md`
-- No runtime dependency, data source, API, or framework decision is made in this proposal.
+## 影響
+
+- OpenSpec active change：`personal-finance-multi-agent-system`
+- 主要討論與規格 artifact：`SPEC.md`
+- 第一版仍不新增 runtime dependency、外部資料源、API key 或部署要求。
+- 後續所有 OpenSpec proposal、spec、design、tasks 預設使用繁體中文撰寫；必要的 wire values、API field names、enum values 與 OpenSpec 結構標記可保留英文。

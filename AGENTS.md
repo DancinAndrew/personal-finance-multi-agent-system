@@ -15,6 +15,7 @@
 
 - `SPEC.md` 是產品與 MVP 行為的主要規格。
 - `openspec/` 是變更控制與可驗收需求，不是一般文件倉庫。
+- OpenSpec 文件預設使用繁體中文撰寫；只有 `MUST`、`SHALL`、`Requirement`、`Scenario`、`WHEN`、`THEN`、API 欄位名稱、enum 值等 parser 或 wire contract 必要 token 保留英文。
 - `docs/` 放穩定工程文件、課程交付文件與 benchmark。
 - `data/` 是 deterministic pipeline 的機器可讀輸入，包含 source catalog、source excerpts、price fixture、evaluation rubric、demo run。
 - `knowledge/` 是 Evidence Pack，不是普通筆記；投資 claim 必須能追溯 source ID、provenance 與 contradiction log。

@@ -1,37 +1,44 @@
 schema: spec-driven
 
 context: |
-  Project: Personal Finance Multi-Agent System.
-  Domain: Taiwan-equity research assistant. MVP is scoped to Phison Electronics (8299) and the question of whether the AI SSD growth story supports current valuation.
-  Tech stack: Python Flask backend, Vue frontend, local Markdown/JSON fixtures, deterministic agents.
-  Runtime boundary: Do not require Supabase, real LLM providers, crawlers, live market data APIs, StatementDog login, or paid data for the MVP.
+  專案：Personal Finance Multi-Agent System。
+  領域：台股研究輔助系統。MVP 範圍限定在群聯電子（8299），核心問題是「AI SSD 成長故事是否足以支撐目前估值」。
+  技術堆疊：Python Flask backend、Vue frontend、本機 Markdown/JSON fixtures、deterministic agents。
+  Runtime 邊界：MVP 不得要求 Supabase、真實 LLM providers、crawlers、即時行情 API、StatementDog 登入或付費資料。
 
-  Documentation ground truth:
-  - README.md is the project entrypoint and quick-start map.
-  - AGENTS.md is the development-agent rulebook.
-  - docs/README.md is the documentation map and explains folder ownership.
-  - SPEC.md is the product and MVP behavior source of truth.
-  - openspec/changes/personal-finance-multi-agent-system/ contains the active change proposal, design, tasks, and requirement scenarios.
-  - docs/project-proposal.md is the course/demo proposal; it is intentionally separate from OpenSpec proposal.md.
-  - docs/course-final-project.md is the canonical AIASE final-project requirement summary.
-  - docs/architecture.md, docs/api.md, and docs/technical-report.md are stable engineering/course deliverables.
-  - data/ contains runtime fixtures and curated source excerpts, not general docs.
-  - knowledge/ contains the Evidence Pack, provenance, and contradiction log. Treat it as the auditable evidence layer for investment claims.
+  語言規則：
+  - OpenSpec 的 proposal、spec、design、tasks 預設都要用繁體中文撰寫。
+  - 若 OpenSpec parser 或 wire contract 需要保留 `ADDED Requirements`、`Requirement`、`Scenario`、`WHEN`、`THEN`、`AND`、API field names、enum values，可保留英文標記。
+  - 除了必要結構標記、程式欄位、enum、指令與專有名詞外，需求說明、驗收標準、設計理由與任務描述都應使用中文。
 
-  Evidence and safety rules:
-  - Raw sources are immutable inputs; do not silently rewrite source excerpts.
-  - Important investment claims must trace to source IDs, provenance, or explicit missing-data gaps.
-  - CMoney/news/FactSet/company-official sources must keep their reliability limits.
-  - Do not turn research support into buy/sell advice.
-  - Missing, paywalled, login-gated, or unverified data must be marked unknown/not_available rather than fabricated.
+  文件真實來源：
+  - README.md 是專案入口與 quick-start map。
+  - AGENTS.md 是 development-agent rulebook。
+  - docs/README.md 是文件地圖，並說明各資料夾 ownership。
+  - SPEC.md 是產品與 MVP 行為的 source of truth。
+  - openspec/changes/personal-finance-multi-agent-system/ 包含 active change 的 proposal、design、tasks 與 requirement scenarios。
+  - docs/project-proposal.md 是課程 / demo proposal，刻意和 OpenSpec proposal.md 分開。
+  - docs/course-final-project.md 是 AIASE final-project requirement summary 的 canonical 文件。
+  - docs/architecture.md、docs/api.md、docs/technical-report.md 是穩定的工程 / 課程交付文件。
+  - data/ 包含 runtime fixtures 與 curated source excerpts，不是一般文件區。
+  - knowledge/ 包含 Evidence Pack、provenance 與 contradiction log，視為 investment claims 的可稽核 evidence layer。
+
+  Evidence 與安全規則：
+  - Raw sources 是 immutable inputs；不得默默改寫 source excerpts。
+  - 重要投資 claims 必須追溯到 source IDs、provenance 或明確 missing-data gaps。
+  - CMoney、新聞、FactSet、公司官方資料都必須保留 reliability limits。
+  - 不得把 research support 寫成 buy/sell advice。
+  - Missing、paywalled、login-gated 或 unverified data 必須標成 unknown / not_available，不得 fabricated。
 
 rules:
   proposal:
-    - Keep OpenSpec proposals about change intent, capabilities, and impact.
-    - Do not duplicate course/demo proposal content from docs/project-proposal.md unless it changes product scope.
+    - 使用繁體中文說明 change intent、capabilities 與 impact。
+    - 除非產品範圍改變，否則不要重複 docs/project-proposal.md 的課程 / demo proposal 內容。
   design:
-    - Reference SPEC.md for product scope and docs/README.md for file ownership.
-    - Keep API, agent workflow, fixtures, and Evidence Pack contracts explicit.
+    - 使用繁體中文撰寫設計理由、取捨、資料契約與驗收語意。
+    - 產品範圍參考 SPEC.md，文件 ownership 參考 docs/README.md。
+    - API、agent workflow、fixtures 與 Evidence Pack contracts 必須明確。
   tasks:
-    - Keep tasks verifiable with local backend tests, OpenSpec validation, frontend build, or documented manual checks.
-    - When a task changes a stable doc, name the exact doc path that must be updated.
+    - 使用繁體中文撰寫任務、驗收標準與完成條件。
+    - 任務必須能用 local backend tests、OpenSpec validation、frontend build 或明確 manual checks 驗證。
+    - 若任務會改 stable doc，必須寫出要更新的精確 doc path。
