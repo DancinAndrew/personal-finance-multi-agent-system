@@ -11,6 +11,7 @@ from backend.app.store import FileStore
 REPO_ROOT = Path(__file__).resolve().parents[2]
 VALID_HEALTH_STATUSES = {"pass", "fail", "unknown", "not_available"}
 VALID_FUNDAMENTAL_STATUSES = {"available", "partial", "missing", "not_available"}
+VALID_VALUATION_STATUSES = {"available", "partial", "missing", "not_available"}
 EXPECTED_FUNDAMENTAL_CATEGORY_IDS = {
     "revenue",
     "profitability",
@@ -111,6 +112,61 @@ class FileStoreTests(unittest.TestCase):
             for metric in category["metrics"]:
                 self.assertTrue(set(metric["source_ids"]).issubset(source_ids))
 
+    def test_valuation_fixture_has_required_shape(self) -> None:
+        snapshot = self.store.load_valuation_fixture()
+        self.assertEqual(snapshot["data_policy"], "public_fixture_only")
+        self.assertFalse(snapshot["price"]["is_live_market_data"])
+        self.assertEqual(snapshot["price"]["unit"], "TWD")
+
+        required_top_level = {
+            "as_of_date",
+            "data_policy",
+            "price",
+            "multiples",
+            "broker_targets",
+            "missing_data",
+        }
+        self.assertTrue(required_top_level.issubset(snapshot.keys()))
+        self.assertGreaterEqual(len(snapshot["multiples"]), 5)
+        self.assertGreaterEqual(len(snapshot["broker_targets"]), 4)
+
+        multiple_required = {
+            "id",
+            "label",
+            "value",
+            "unit",
+            "coverage_status",
+            "source_ids",
+            "interpretation",
+            "missing_data",
+        }
+        for multiple in snapshot["multiples"]:
+            self.assertTrue(multiple_required.issubset(multiple.keys()))
+            self.assertIn(multiple["coverage_status"], VALID_VALUATION_STATUSES)
+            if multiple["value"] is None:
+                self.assertNotEqual(multiple["coverage_status"], "available")
+                self.assertGreater(len(multiple["missing_data"]), 0)
+
+        broker_target_required = {
+            "id",
+            "source_label",
+            "date",
+            "source_ids",
+            "reliability_note",
+        }
+        for target in snapshot["broker_targets"]:
+            self.assertTrue(broker_target_required.issubset(target.keys()))
+            self.assertTrue("target_price" in target or "target_price_range" in target)
+
+    def test_valuation_fixture_source_ids_reference_catalog(self) -> None:
+        source_ids = {source["id"] for source in self.store.load_source_catalog()}
+        snapshot = self.store.load_valuation_fixture()
+        self.assertTrue(set(snapshot["price"]["source_ids"]).issubset(source_ids))
+        for multiple in snapshot["multiples"]:
+            self.assertTrue(set(multiple["source_ids"]).issubset(source_ids))
+        for target in snapshot["broker_targets"]:
+            self.assertTrue(set(target["source_ids"]).issubset(source_ids))
+
 
 class OrchestratorTests(unittest.TestCase):
     def setUp(self) -> None:
@@ -119,8 +175,9 @@ class OrchestratorTests(unittest.TestCase):
     def test_default_run_contains_trace_report_and_evaluation(self) -> None:
         result = self.orchestrator.run_default()
         self.assertEqual(result["run"]["status"], "completed")
-        self.assertEqual(len(result["steps"]), 8)
+        self.assertEqual(len(result["steps"]), 9)
         self.assertIn("health_check_agent", [step["agent"] for step in result["steps"]])
+        self.assertIn("valuation_agent", [step["agent"] for step in result["steps"]])
         self.assertIn("evidence", result)
         self.assertNotIn("wiki", result)
         self.assertIn("report_markdown", result["report"])
@@ -155,6 +212,31 @@ class OrchestratorTests(unittest.TestCase):
         )
         self.assertGreaterEqual(len(fundamentals["key_findings"]), 2)
         self.assertIn("現金流", "、".join(fundamentals["data_gaps"]))
+
+    def test_default_run_contains_valuation_analysis(self) -> None:
+        result = self.orchestrator.run_default()
+        valuation = result["analysis"]["valuation"]
+        self.assertEqual(valuation["summary"]["data_policy"], "public_fixture_only")
+        self.assertFalse(valuation["summary"]["is_live_market_data"])
+        self.assertEqual(valuation["summary"]["price_as_of_date"], "2026-05-10")
+        self.assertEqual(valuation["summary"]["coverage"]["partial"], 2)
+        self.assertEqual(valuation["summary"]["coverage"]["missing"], 4)
+        self.assertEqual(len(valuation["scenarios"]), 6)
+        self.assertGreaterEqual(len(valuation["multiples"]), 5)
+        self.assertGreaterEqual(len(valuation["broker_targets"]), 4)
+        self.assertIn("歷史 P/E percentile", "、".join(valuation["data_gaps"]))
+        self.assertTrue(
+            any("AI SSD" in item and "支撐目前估值" in item for item in valuation["interpretation"])
+        )
+
+    def test_price_override_changes_valuation_scenarios(self) -> None:
+        default = self.orchestrator.run_default()
+        overridden = self.orchestrator.run({"price": 3000})
+        default_pe = default["analysis"]["valuation"]["scenarios"][1]["forward_pe"]
+        override_pe = overridden["analysis"]["valuation"]["scenarios"][1]["forward_pe"]
+        self.assertNotEqual(default_pe, override_pe)
+        self.assertGreater(override_pe, default_pe)
+        self.assertEqual(overridden["analysis"]["valuation"]["summary"]["price"], 3000)
 
     def test_price_override_changes_forward_pe(self) -> None:
         default = self.orchestrator.run_default()
@@ -213,6 +295,24 @@ class OrchestratorTests(unittest.TestCase):
             "現金流品質已確認改善",
             "Forward P/E 證明便宜",
             "Q1 EPS 年化為正式全年預估",
+        ]
+        for phrase in forbidden:
+            self.assertNotIn(phrase, report)
+
+    def test_report_contains_valuation_breakdown(self) -> None:
+        report = self.orchestrator.run_default()["report"]["report_markdown"]
+        self.assertIn("估值拆解", report)
+        self.assertIn("示範股價日期", report)
+        self.assertIn("非即時行情", report)
+        self.assertIn("券商目標價區間", report)
+        self.assertIn("P/B", report)
+        self.assertIn("殖利率", report)
+        self.assertIn("歷史 P/E percentile", report)
+        forbidden = [
+            "3,080 元就是合理價",
+            "目標價就是買進理由",
+            "Forward P/E 證明便宜",
+            "CMoney 完整券商模型",
         ]
         for phrase in forbidden:
             self.assertNotIn(phrase, report)
@@ -289,6 +389,43 @@ class OrchestratorTests(unittest.TestCase):
         self.assertLess(result.payload["total_score"], 4.0)
         self.assertIn("fundamental_overclaim", result.payload["hard_fail_hits"])
 
+    def test_evaluation_flags_missing_valuation_breakdown(self) -> None:
+        store = FileStore(REPO_ROOT)
+        health_checks = {"summary": {"total": 7}, "checks": store.load_health_checks()}
+        fundamentals = {"categories": store.load_fundamental_metrics()["categories"]}
+        result = EvaluationAgent().run(
+            "run_missing_valuation",
+            (
+                "# 群聯電子（8299）研究輔助報告\n\n"
+                "## 基本面拆解\n\n"
+                "營收 partial；獲利能力 partial；安全性 missing；成長力 partial；現金流品質 missing。\n\n"
+                "## 股票健診摘要\n\n"
+                + "\n".join(f"- {check['name']}" for check in health_checks["checks"])
+                + "\n\n這是研究輔助，不是買賣建議。"
+            ),
+            store.load_rubric(),
+            provenance_count=5,
+            health_checks=health_checks,
+            fundamentals=fundamentals,
+            valuation={"summary": {"coverage": {"partial": 2, "missing": 4}}},
+        )
+        self.assertLess(result.payload["total_score"], 4.0)
+        self.assertEqual(result.payload["status"], "needs_revision")
+
+    def test_evaluation_flags_valuation_overclaim(self) -> None:
+        store = FileStore(REPO_ROOT)
+        result = EvaluationAgent().run(
+            "run_bad_valuation",
+            "估值拆解：3,080 元就是合理價，Forward P/E 證明便宜，目標價就是買進理由。",
+            store.load_rubric(),
+            provenance_count=5,
+            health_checks={"summary": {"total": 7}, "checks": store.load_health_checks()},
+            fundamentals={"categories": store.load_fundamental_metrics()["categories"]},
+            valuation={"summary": {"coverage": {"partial": 2, "missing": 4}}},
+        )
+        self.assertLess(result.payload["total_score"], 4.0)
+        self.assertIn("valuation_overclaim", result.payload["hard_fail_hits"])
+
 
 class FlaskApiTests(unittest.TestCase):
     def test_health_endpoint_when_flask_is_available(self) -> None:
@@ -323,6 +460,9 @@ class FlaskApiTests(unittest.TestCase):
         self.assertEqual(len(data["analysis"]["health_checks"]["checks"]), 7)
         self.assertEqual(data["analysis"]["fundamentals"]["summary"]["categories_total"], 5)
         self.assertEqual(len(data["analysis"]["fundamentals"]["categories"]), 5)
+        self.assertIn("valuation", data["analysis"])
+        self.assertEqual(len(data["analysis"]["valuation"]["scenarios"]), 6)
+        self.assertFalse(data["analysis"]["valuation"]["summary"]["is_live_market_data"])
 
     def test_missing_run_returns_404_when_flask_is_available(self) -> None:
         try:
