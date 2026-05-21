@@ -1,0 +1,249 @@
+{
+  "as_of_date": "2026-05-10",
+  "data_policy": "public_fixture_only",
+  "categories": [
+    {
+      "id": "revenue",
+      "name": "營收",
+      "coverage_status": "partial",
+      "category_takeaway": "已取得 2026 年 4 月營收、月增與年增線索，但尚未建立完整近 12 個月序列與產品別拆分。",
+      "metrics": [
+        {
+          "id": "monthly_revenue_latest",
+          "label": "最新月營收",
+          "period": "2026-04",
+          "value": 20.207493,
+          "unit": "TWD_BN",
+          "coverage_status": "available",
+          "source_ids": ["S1", "S2"],
+          "interpretation": "4 月營收約 202.07 億元，可作為 AI SSD / NAND 循環敘事的營收端線索。",
+          "missing_data": []
+        },
+        {
+          "id": "monthly_revenue_yoy_latest",
+          "label": "最新月營收 YoY",
+          "period": "2026-04",
+          "value": 236.63,
+          "unit": "percent",
+          "coverage_status": "available",
+          "source_ids": ["S1", "S2"],
+          "interpretation": "單月年增率強，但仍需多月序列確認成長延續性。",
+          "missing_data": []
+        },
+        {
+          "id": "cumulative_revenue_latest",
+          "label": "1-4 月累計營收",
+          "period": "2026-01_to_2026-04",
+          "value": 61.174446,
+          "unit": "TWD_BN",
+          "coverage_status": "available",
+          "source_ids": ["S1", "S2"],
+          "interpretation": "累計營收約 611.74 億元，支持成長故事已反映到公開營收數字。",
+          "missing_data": []
+        },
+        {
+          "id": "product_revenue_mix",
+          "label": "產品別營收",
+          "period": "2026-Q1_to_2026-Q2",
+          "value": null,
+          "unit": "text",
+          "coverage_status": "missing",
+          "source_ids": [],
+          "interpretation": "尚無本機 fixture 可拆解 AI SSD、controller、module 或其他產品營收占比。",
+          "missing_data": ["AI SSD 營收占比", "controller 營收占比", "產品別毛利貢獻"]
+        }
+      ],
+      "missing_data": ["近 12 個月營收序列", "累計月營收 YoY 序列", "產品別營收"]
+    },
+    {
+      "id": "profitability",
+      "name": "獲利能力",
+      "coverage_status": "partial",
+      "category_takeaway": "已有 Q1 EPS 與新聞轉述的毛利率線索，但仍缺正式財報驗證與多期獲利率序列。",
+      "metrics": [
+        {
+          "id": "q1_eps",
+          "label": "Q1 EPS",
+          "period": "2026-Q1",
+          "value": 68.8,
+          "unit": "TWD",
+          "coverage_status": "available",
+          "source_ids": ["S3"],
+          "interpretation": "Q1 EPS 可作為獲利線索，但不能直接年化成正式全年預估。",
+          "missing_data": []
+        },
+        {
+          "id": "q1_gross_margin_news_line",
+          "label": "Q1 毛利率新聞線索",
+          "period": "2026-Q1",
+          "value": 61.3,
+          "unit": "percent",
+          "coverage_status": "partial",
+          "source_ids": ["S3"],
+          "interpretation": "新聞轉述顯示 Q1 毛利率強，但正式研究需回到財報並補多期毛利率。",
+          "missing_data": ["正式財報毛利率", "多期毛利率序列"]
+        },
+        {
+          "id": "operating_margin",
+          "label": "營業利益率",
+          "period": "2026-Q1",
+          "value": null,
+          "unit": "percent",
+          "coverage_status": "missing",
+          "source_ids": [],
+          "interpretation": "缺營業利益率，不能判斷本業獲利品質是否同步改善。",
+          "missing_data": ["營業利益", "營業利益率"]
+        },
+        {
+          "id": "roe_roa",
+          "label": "ROE / ROA",
+          "period": "2026-Q1",
+          "value": null,
+          "unit": "ratio",
+          "coverage_status": "missing",
+          "source_ids": [],
+          "interpretation": "缺資產與權益報酬率，不能完整評估資本效率。",
+          "missing_data": ["ROE", "ROA", "平均股東權益", "平均資產"]
+        }
+      ],
+      "missing_data": ["正式財報毛利率與多期毛利率序列", "營業利益率", "淨利率", "ROE / ROA"]
+    },
+    {
+      "id": "safety",
+      "name": "安全性",
+      "coverage_status": "missing",
+      "category_takeaway": "目前本機 fixture 尚未納入資產負債表與償債能力資料，因此不能判定安全性。",
+      "metrics": [
+        {
+          "id": "debt_ratio",
+          "label": "負債比",
+          "period": "2026-Q1",
+          "value": null,
+          "unit": "ratio",
+          "coverage_status": "missing",
+          "source_ids": [],
+          "interpretation": "缺負債比，不能判斷槓桿與資產負債表壓力。",
+          "missing_data": ["總負債", "總資產", "負債比"]
+        },
+        {
+          "id": "current_quick_ratio",
+          "label": "流動比 / 速動比",
+          "period": "2026-Q1",
+          "value": null,
+          "unit": "ratio",
+          "coverage_status": "missing",
+          "source_ids": [],
+          "interpretation": "缺短期償債能力資料，不能判定流動性安全邊際。",
+          "missing_data": ["流動資產", "流動負債", "存貨", "流動比", "速動比"]
+        },
+        {
+          "id": "interest_coverage",
+          "label": "利息保障倍數",
+          "period": "2026-Q1",
+          "value": null,
+          "unit": "ratio",
+          "coverage_status": "missing",
+          "source_ids": [],
+          "interpretation": "缺利息費用與營業利益資料，不能判斷債務服務能力。",
+          "missing_data": ["利息費用", "營業利益", "利息保障倍數", "金融借款"]
+        }
+      ],
+      "missing_data": ["負債比", "流動比", "速動比", "利息保障倍數", "金融借款"]
+    },
+    {
+      "id": "growth",
+      "name": "成長力",
+      "coverage_status": "partial",
+      "category_takeaway": "營收與 EPS 皆有正向線索，但缺完整月營收 YoY 序列與多個獲利成長率。",
+      "metrics": [
+        {
+          "id": "latest_month_revenue_growth",
+          "label": "最新月營收年增",
+          "period": "2026-04",
+          "value": 236.63,
+          "unit": "percent",
+          "coverage_status": "available",
+          "source_ids": ["S1", "S2"],
+          "interpretation": "單月營收年增支持成長敘事，但仍需連續性驗證。",
+          "missing_data": []
+        },
+        {
+          "id": "cumulative_revenue_growth",
+          "label": "1-4 月累計營收年增",
+          "period": "2026-01_to_2026-04",
+          "value": 208.32,
+          "unit": "percent",
+          "coverage_status": "available",
+          "source_ids": ["S1"],
+          "interpretation": "累計營收年增提供比單月更穩的成長線索。",
+          "missing_data": []
+        },
+        {
+          "id": "q1_profit_growth_sequence",
+          "label": "Q1 獲利成長序列",
+          "period": "2026-Q1",
+          "value": null,
+          "unit": "percent",
+          "coverage_status": "partial",
+          "source_ids": ["S3"],
+          "interpretation": "已有 EPS 數字，但缺去年同期 EPS、毛利、營業利益與淨利成長率。",
+          "missing_data": ["去年同期 EPS", "毛利年增率", "營業利益年增率", "淨利年增率"]
+        }
+      ],
+      "missing_data": ["近 3-12 個月月營收 YoY 序列", "毛利年增率", "營業利益年增率", "淨利年增率"]
+    },
+    {
+      "id": "cash_flow_quality",
+      "name": "現金流品質",
+      "coverage_status": "missing",
+      "category_takeaway": "目前本機 fixture 沒有營業現金流、自由現金流或週轉資料，不能把營收與 EPS 線索解讀成現金流改善。",
+      "metrics": [
+        {
+          "id": "operating_cash_flow",
+          "label": "營業現金流",
+          "period": "2026-Q1",
+          "value": null,
+          "unit": "TWD_BN",
+          "coverage_status": "missing",
+          "source_ids": [],
+          "interpretation": "缺營業現金流，不能判斷獲利是否轉成現金。",
+          "missing_data": ["營業現金流"]
+        },
+        {
+          "id": "free_cash_flow",
+          "label": "自由現金流",
+          "period": "2026-Q1",
+          "value": null,
+          "unit": "TWD_BN",
+          "coverage_status": "missing",
+          "source_ids": [],
+          "interpretation": "缺自由現金流，不能判斷資本支出後的現金產生能力。",
+          "missing_data": ["營業現金流", "資本支出", "自由現金流"]
+        },
+        {
+          "id": "ocf_to_net_income",
+          "label": "OCF / Net income",
+          "period": "2026-Q1",
+          "value": null,
+          "unit": "ratio",
+          "coverage_status": "missing",
+          "source_ids": [],
+          "interpretation": "缺 OCF / net income，不能判斷盈餘品質。",
+          "missing_data": ["營業現金流", "淨利", "OCF / net income"]
+        },
+        {
+          "id": "inventory_receivable_turnover",
+          "label": "存貨 / 應收週轉",
+          "period": "2026-Q1",
+          "value": null,
+          "unit": "days",
+          "coverage_status": "missing",
+          "source_ids": [],
+          "interpretation": "缺週轉天數，不能判斷 NAND 循環下的庫存與收款風險。",
+          "missing_data": ["存貨週轉天數", "應收帳款週轉天數"]
+        }
+      ],
+      "missing_data": ["營業現金流", "自由現金流", "OCF / net income", "存貨週轉天數", "應收帳款週轉天數"]
+    }
+  ]
+}

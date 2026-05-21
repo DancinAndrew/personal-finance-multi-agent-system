@@ -172,9 +172,25 @@ class NewsSectorAgent:
 
 
 class FundamentalAgent:
-    """Build EPS scenarios and valuation sensitivity."""
+    """Build EPS scenarios plus a conservative fundamental snapshot."""
 
-    def run(self, run_id: str, price: float, price_date: str) -> AgentResult:
+    def run(
+        self,
+        run_id: str,
+        price: float,
+        price_date: str,
+        metrics_snapshot: dict[str, Any],
+        source_catalog: list[dict[str, Any]],
+    ) -> AgentResult:
+        catalog_ids = {source["id"] for source in source_catalog}
+        source_ids = _unique_source_ids(
+            [source_id for assumption in EPS_ASSUMPTIONS for source_id in assumption["source_ids"]]
+            + _source_ids_from_fundamentals(metrics_snapshot)
+        )
+        invalid_source_ids = set(source_ids).difference(catalog_ids)
+        if invalid_source_ids:
+            raise ValueError(f"Unknown fundamental source ids: {sorted(invalid_source_ids)}")
+
         def work() -> tuple[str, dict[str, Any]]:
             scenarios = []
             for assumption in EPS_ASSUMPTIONS:
@@ -187,16 +203,28 @@ class FundamentalAgent:
                         "forward_pe": pe,
                     }
                 )
+            categories = metrics_snapshot["categories"]
+            summary = _build_fundamental_summary(metrics_snapshot)
+            key_findings = _build_fundamental_key_findings(categories)
+            data_gaps = _major_fundamental_gaps(categories)
             return (
-                "建立 6 個 2026 EPS 情境；估值結論對 FactSet 中位數與群益高標差異高度敏感。",
-                {"valuation_scenarios": scenarios},
+                "建立 6 個 2026 EPS/P/E 情境，並整理五大基本面面向："
+                f"{summary['partial']} partial、{summary['missing']} missing；"
+                f"主要缺口為{'、'.join(summary['major_gaps'])}。",
+                {
+                    "valuation_scenarios": scenarios,
+                    "summary": summary,
+                    "categories": categories,
+                    "key_findings": key_findings,
+                    "data_gaps": data_gaps,
+                },
             )
 
         return timed_step(
             agent="fundamental_agent",
             run_id=run_id,
             input_summary=f"使用示範股價 {price} 元（{price_date}，非即時行情）計算 Forward P/E。",
-            source_ids=["S3", "S4", "S5"],
+            source_ids=source_ids,
             confidence=0.8,
             work=work,
         )
@@ -209,10 +237,12 @@ class HealthCheckAgent:
         self,
         run_id: str,
         checks: list[dict[str, Any]],
+        fundamentals: dict[str, Any] | None = None,
     ) -> AgentResult:
         source_ids = sorted({source_id for check in checks for source_id in check["source_ids"]})
 
         def work() -> tuple[str, dict[str, Any]]:
+            fundamental_alignment = _build_health_fundamental_alignment(fundamentals)
             summary = {
                 "total": len(checks),
                 "pass": _count_status(checks, "pass"),
@@ -221,6 +251,7 @@ class HealthCheckAgent:
                 "not_available": _count_status(checks, "not_available"),
                 "data_policy": "public_fixture_only",
                 "major_gaps": _major_health_gaps(checks),
+                "fundamental_alignment": fundamental_alignment,
             }
             return (
                 "完成 7 種股票健診框架，"
@@ -233,7 +264,7 @@ class HealthCheckAgent:
         return timed_step(
             agent="health_check_agent",
             run_id=run_id,
-            input_summary="使用 public fixture 將財報狗式七種股票健診轉成保守狀態與資料缺口。",
+            input_summary="使用 public fixture 將財報狗式七種股票健診轉成保守狀態與資料缺口；可讀取 fundamentals payload 但不重新計算 metrics。",
             source_ids=source_ids,
             confidence=0.78,
             work=work,
@@ -282,12 +313,11 @@ class ReportGenerator:
         price_note: str,
     ) -> AgentResult:
         def work() -> tuple[str, dict[str, Any]]:
-            scenarios = fundamentals["valuation_scenarios"]
             report = _build_report(
                 question=question,
                 target=target,
                 thesis=narrative["thesis"],
-                scenarios=scenarios,
+                fundamentals=fundamentals,
                 health_checks=health_checks,
                 risks=risks["risks"],
                 price_note=price_note,
@@ -334,6 +364,7 @@ class EvaluationAgent:
         rubric: dict[str, Any],
         provenance_count: int,
         health_checks: dict[str, Any] | None = None,
+        fundamentals: dict[str, Any] | None = None,
     ) -> AgentResult:
         def work() -> tuple[str, dict[str, Any]]:
             hard_fail_hits = [
@@ -341,17 +372,24 @@ class EvaluationAgent:
             ]
             if _health_check_hallucination_is_hit(report_markdown):
                 hard_fail_hits.append("health_check_hallucination")
+            if _fundamental_overclaim_is_hit(report_markdown):
+                hard_fail_hits.append("fundamental_overclaim")
             health_summary_missing = not _has_health_check_summary(report_markdown, health_checks)
+            fundamental_breakdown_missing = not _has_fundamental_breakdown(
+                report_markdown,
+                fundamentals,
+            )
             dimensions = [
                 {"id": "source_grounding", "name": "來源 grounding", "score": 4.5},
                 {"id": "valuation_rigor", "name": "財務與估值嚴謹度", "score": 4.4},
+                {"id": "fundamental_coverage", "name": "基本面覆蓋與缺口誠實度", "score": 4.2},
                 {"id": "industry_narrative", "name": "產業敘事品質", "score": 4.1},
                 {"id": "risk_coverage", "name": "風險與反方觀點", "score": 4.4},
                 {"id": "health_check_honesty", "name": "健診與資料缺口誠實度", "score": 4.3},
                 {"id": "user_usefulness", "name": "使用者可用性", "score": 4.5},
             ]
             total = round(sum(item["score"] for item in dimensions) / len(dimensions), 2)
-            if health_summary_missing:
+            if health_summary_missing or fundamental_breakdown_missing:
                 total = min(total, 3.5)
             if hard_fail_hits:
                 total = min(total, 2.5)
@@ -360,10 +398,13 @@ class EvaluationAgent:
                 "有標示公開來源 proxy golden sample，不宣稱完整券商研報。",
                 f"已有 {provenance_count} 筆 evidence provenance 可追溯重要 claim。",
                 "股票健診採 public fixture 保守輸出，缺資料時標示 unknown / not_available。",
+                "基本面拆解採五大面向 coverage，營收 / EPS 是 partial evidence，安全性與現金流仍缺資料。",
                 "仍需後續補正式 Q1 財報、現金流、股利、籌碼與長期估值區間。",
             ]
             if health_summary_missing:
                 notes.append("報告缺少完整股票健診摘要或未呈現七種健診，需補強。")
+            if fundamental_breakdown_missing:
+                notes.append("報告缺少完整五大面向基本面拆解，需補營收、獲利、安全性、成長力與現金流品質。")
             payload = {
                 "total_score": total,
                 "threshold": rubric["threshold"],
@@ -389,17 +430,20 @@ def _build_report(
     question: str,
     target: dict[str, Any],
     thesis: list[str],
-    scenarios: list[dict[str, Any]],
+    fundamentals: dict[str, Any],
     health_checks: dict[str, Any],
     risks: list[str],
     price_note: str,
 ) -> str:
     target_display_name = _target_display_name(target)
+    scenarios = fundamentals["valuation_scenarios"]
     scenario_rows = "\n".join(
         f"| {item['label']} | {item['eps']:.2f} | {item['forward_pe']:.1f}x | {', '.join(item['source_ids'])} | {item['interpretation']} |"
         for item in scenarios
     )
     thesis_rows = "\n".join(f"- {item}" for item in thesis)
+    fundamental_rows = _build_fundamental_rows(fundamentals["categories"])
+    fundamental_gaps = "、".join(fundamentals["summary"]["major_gaps"])
     health_rows = _build_health_check_rows(health_checks["checks"])
     health_gaps = "、".join(health_checks["summary"]["major_gaps"])
     risk_rows = "\n".join(f"- {item}" for item in risks)
@@ -417,7 +461,19 @@ def _build_report(
 
 {thesis_rows}
 
+## 基本面拆解
+
+本段把基本面品質與估值敏感度分開看。EPS / Forward P/E 是估值敏感度，不等同完整基本面品質；`partial` 代表有方向性線索但不足以做完整判斷，`missing` 代表本機 fixture 尚未納入必要資料。
+
+| 面向 | Coverage | 保守解讀 | 主要指標 | 主要缺口 | Sources |
+|---|---|---|---|---|---|
+{fundamental_rows}
+
+基本面主要缺口：{fundamental_gaps}。
+
 ## EPS 與 Forward P/E 情境
+
+下表只呈現 2026 EPS 假設對 Forward P/E 的敏感度；它不能替代營收、獲利、安全性、成長力與現金流品質的完整基本面判斷。
 
 | 情境 | 2026 EPS | Forward P/E | Sources | 解讀 |
 |---|---:|---:|---|---|
@@ -459,6 +515,96 @@ def _count_status(checks: list[dict[str, Any]], status: str) -> int:
     return sum(1 for check in checks if check["status"] == status)
 
 
+def _source_ids_from_fundamentals(snapshot: dict[str, Any]) -> list[str]:
+    return [
+        source_id
+        for category in snapshot["categories"]
+        for metric in category["metrics"]
+        for source_id in metric["source_ids"]
+    ]
+
+
+def _unique_source_ids(source_ids: list[str]) -> list[str]:
+    return sorted(set(source_ids), key=_source_sort_key)
+
+
+def _source_sort_key(source_id: str) -> tuple[int, str]:
+    if source_id.startswith("S") and source_id[1:].isdigit():
+        return (int(source_id[1:]), source_id)
+    return (999, source_id)
+
+
+def _build_fundamental_summary(snapshot: dict[str, Any]) -> dict[str, Any]:
+    categories = snapshot["categories"]
+    return {
+        "categories_total": len(categories),
+        "available": _count_category_status(categories, "available"),
+        "partial": _count_category_status(categories, "partial"),
+        "missing": _count_category_status(categories, "missing"),
+        "not_available": _count_category_status(categories, "not_available"),
+        "data_policy": snapshot["data_policy"],
+        "as_of_date": snapshot["as_of_date"],
+        "major_gaps": _major_fundamental_gaps(categories)[:6],
+    }
+
+
+def _count_category_status(categories: list[dict[str, Any]], status: str) -> int:
+    return sum(1 for category in categories if category["coverage_status"] == status)
+
+
+def _build_fundamental_key_findings(categories: list[dict[str, Any]]) -> list[str]:
+    by_id = {category["id"]: category for category in categories}
+    return [
+        f"{by_id['revenue']['name']}：{by_id['revenue']['category_takeaway']}",
+        f"{by_id['profitability']['name']}：{by_id['profitability']['category_takeaway']}",
+        "安全性與現金流品質目前標為 missing，不能用 EPS 或營收新聞替代資產負債表與現金流檢查。",
+    ]
+
+
+def _major_fundamental_gaps(categories: list[dict[str, Any]]) -> list[str]:
+    gap_keywords = [
+        ("毛利", "毛利率"),
+        ("現金流", "現金流"),
+        ("負債", "負債比"),
+        ("流動比", "流動比"),
+        ("速動比", "速動比"),
+        ("週轉", "週轉天數"),
+        ("ROE", "ROE / ROA"),
+        ("產品別", "產品別營收"),
+        ("YoY", "月營收 YoY 序列"),
+    ]
+    gaps: list[str] = []
+    for category in categories:
+        for missing in category["missing_data"]:
+            label = next((value for needle, value in gap_keywords if needle in missing), missing)
+            if label not in gaps:
+                gaps.append(label)
+    return gaps
+
+
+def _build_health_fundamental_alignment(
+    fundamentals: dict[str, Any] | None,
+) -> dict[str, str]:
+    if not fundamentals:
+        return {}
+    by_id = {category["id"]: category for category in fundamentals.get("categories", [])}
+    alignment: dict[str, str] = {}
+    growth = by_id.get("growth")
+    if growth:
+        alignment["growth_stock"] = (
+            f"Fundamental growth coverage is {growth['coverage_status']}；"
+            f"{growth['category_takeaway']}"
+        )
+    cash_flow = by_id.get("cash_flow_quality")
+    if cash_flow:
+        alignment["landmine_risk"] = (
+            f"Cash-flow quality coverage is {cash_flow['coverage_status']}；"
+            "地雷股健診仍需現金流與週轉資料。"
+        )
+    alignment["value_stock"] = "Forward P/E 情境只作敏感度，不作便宜股健診通過判定。"
+    return alignment
+
+
 def _major_health_gaps(checks: list[dict[str, Any]]) -> list[str]:
     gap_keywords = [
         ("現金流", "現金流"),
@@ -478,6 +624,49 @@ def _major_health_gaps(checks: list[dict[str, Any]]) -> list[str]:
             if label not in gaps:
                 gaps.append(label)
     return gaps[:5]
+
+
+def _build_fundamental_rows(categories: list[dict[str, Any]]) -> str:
+    rows = []
+    for category in categories:
+        metrics = _build_fundamental_metric_summary(category["metrics"])
+        missing = "、".join(category["missing_data"][:4])
+        sources = _format_metric_sources(category["metrics"])
+        rows.append(
+            f"| {category['name']} | {category['coverage_status']} | "
+            f"{category['category_takeaway']} | {metrics} | {missing} | {sources} |"
+        )
+    return "\n".join(rows)
+
+
+def _build_fundamental_metric_summary(metrics: list[dict[str, Any]]) -> str:
+    items = []
+    for metric in metrics[:3]:
+        items.append(
+            f"{metric['label']}={_format_metric_value(metric)} ({metric['coverage_status']})"
+        )
+    return "；".join(items)
+
+
+def _format_metric_value(metric: dict[str, Any]) -> str:
+    value = metric["value"]
+    if value is None:
+        return "缺資料"
+    unit = metric["unit"]
+    if unit == "TWD_BN":
+        return f"{float(value):.2f} 十億元"
+    if unit == "TWD":
+        return f"{float(value):.2f} 元"
+    if unit == "percent":
+        return f"{float(value):.2f}%"
+    return f"{value} {unit}"
+
+
+def _format_metric_sources(metrics: list[dict[str, Any]]) -> str:
+    source_ids = _unique_source_ids(
+        [source_id for metric in metrics for source_id in metric["source_ids"]]
+    )
+    return ", ".join(source_ids) if source_ids else "無直接來源"
 
 
 def _build_health_check_rows(checks: list[dict[str, Any]]) -> str:
@@ -505,6 +694,24 @@ def _has_health_check_summary(
     return all(check["name"] in report_markdown for check in checks)
 
 
+def _has_fundamental_breakdown(
+    report_markdown: str,
+    fundamentals: dict[str, Any] | None,
+) -> bool:
+    if not fundamentals:
+        return False
+    if "基本面拆解" not in report_markdown:
+        return False
+    categories = fundamentals.get("categories", [])
+    if len(categories) != 5:
+        return False
+    return all(
+        category["name"] in report_markdown
+        and category["coverage_status"] in report_markdown
+        for category in categories
+    )
+
+
 def _health_check_hallucination_is_hit(report_markdown: str) -> bool:
     risky_phrases = [
         "已使用財報狗付費資料",
@@ -513,6 +720,20 @@ def _health_check_hallucination_is_hit(report_markdown: str) -> bool:
         "not_available 通過",
         "unknown 通過",
         "完整驗證",
+    ]
+    return any(phrase in report_markdown for phrase in risky_phrases)
+
+
+def _fundamental_overclaim_is_hit(report_markdown: str) -> bool:
+    risky_phrases = [
+        "Q1 EPS 年化為正式全年預估",
+        "現金流品質已確認改善",
+        "安全性已確認健康",
+        "獲利能力全面改善",
+        "Forward P/E 證明便宜",
+        "基本面已完整驗證",
+        "partial 已完整驗證",
+        "missing 已完整驗證",
     ]
     return any(phrase in report_markdown for phrase in risky_phrases)
 
@@ -532,4 +753,6 @@ def _rule_is_hit(rule: str, report_markdown: str) -> bool:
         claims_live_price = "即時行情" in report_markdown and "不是即時行情" not in report_markdown
         lacks_date = "日期" not in report_markdown
         return claims_live_price or lacks_date
+    if "partial" in rule or "missing" in rule or "Q1 EPS" in rule:
+        return _fundamental_overclaim_is_hit(report_markdown)
     return False

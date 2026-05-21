@@ -5,25 +5,31 @@
     {
       "id": "source_grounding",
       "name": "來源 grounding",
-      "weight": 0.25,
+      "weight": 0.2,
       "passing_standard": "每個重要數字都有來源、日期、資料類型，並能區分原始資料與轉述。"
     },
     {
       "id": "valuation_rigor",
       "name": "財務與估值嚴謹度",
-      "weight": 0.25,
+      "weight": 0.2,
       "passing_standard": "至少呈現 EPS 情境、Forward P/E、共識分散程度與 Q1 年化限制。"
+    },
+    {
+      "id": "fundamental_coverage",
+      "name": "基本面覆蓋與缺口誠實度",
+      "weight": 0.15,
+      "passing_standard": "必須分開呈現營收、獲利能力、安全性、成長力與現金流品質，並清楚標示 available、partial、missing 或 not_available。"
     },
     {
       "id": "industry_narrative",
       "name": "產業敘事品質",
-      "weight": 0.2,
+      "weight": 0.15,
       "passing_standard": "能說明 AI SSD、enterprise SSD、NAND 供需如何影響群聯，而不是只寫題材口號。"
     },
     {
       "id": "risk_coverage",
       "name": "風險與反方觀點",
-      "weight": 0.2,
+      "weight": 0.15,
       "passing_standard": "主動提出 NAND 循環、庫存、毛利率、現金流、估值敏感度等風險。"
     },
     {
@@ -46,6 +52,8 @@
     "使用過期股價計算本益比，卻沒有標示日期。",
     "給出現在買、一定會漲、保證合理等交易指令或保證語氣。",
     "宣稱使用財報狗付費或登入資料，但 fixture 沒有該來源。",
-    "把 unknown 或 not_available 的股票健診說成已完整通過或完整驗證。"
+    "把 unknown 或 not_available 的股票健診說成已完整通過或完整驗證。",
+    "把 partial 或 missing 的 fundamental metric 說成已完整驗證。",
+    "把 Q1 EPS 年化為正式全年預估，或把 Forward P/E 當成公司便宜的完整證明。"
   ]
 }

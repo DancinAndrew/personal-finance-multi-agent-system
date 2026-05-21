@@ -68,6 +68,7 @@ class FileStoreTests(unittest.TestCase):
     def test_fundamental_metrics_fixture_has_required_shape(self) -> None:
         snapshot = self.store.load_fundamental_metrics()
         self.assertEqual(snapshot["data_policy"], "public_fixture_only")
+        self.assertEqual(len(snapshot["categories"]), 5)
         self.assertEqual(
             {category["id"] for category in snapshot["categories"]},
             EXPECTED_FUNDAMENTAL_CATEGORY_IDS,
@@ -144,6 +145,7 @@ class OrchestratorTests(unittest.TestCase):
         fundamentals = result["analysis"]["fundamentals"]
         self.assertEqual(len(fundamentals["valuation_scenarios"]), 6)
         self.assertEqual(fundamentals["summary"]["categories_total"], 5)
+        self.assertEqual(len(fundamentals["categories"]), 5)
         self.assertEqual(fundamentals["summary"]["partial"], 3)
         self.assertEqual(fundamentals["summary"]["missing"], 2)
         self.assertEqual(fundamentals["summary"]["data_policy"], "public_fixture_only")

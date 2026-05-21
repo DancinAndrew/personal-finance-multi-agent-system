@@ -54,6 +54,10 @@
         <span class="label">Health gaps</span>
         <strong>{{ healthGapSummary }}</strong>
       </div>
+      <div>
+        <span class="label">Fundamentals</span>
+        <strong>{{ fundamentalCoverageSummary }}</strong>
+      </div>
     </section>
 
     <section v-if="result" class="workspace-grid">
@@ -89,6 +93,7 @@
           <button :class="{ active: activeTab === 'step' }" type="button" @click="activeTab = 'step'">Step</button>
           <button :class="{ active: activeTab === 'sources' }" type="button" @click="activeTab = 'sources'">Sources</button>
           <button :class="{ active: activeTab === 'health' }" type="button" @click="activeTab = 'health'">Health</button>
+          <button :class="{ active: activeTab === 'fundamentals' }" type="button" @click="activeTab = 'fundamentals'">Fundamentals</button>
           <button :class="{ active: activeTab === 'evidence' }" type="button" @click="activeTab = 'evidence'">Evidence</button>
           <button :class="{ active: activeTab === 'eval' }" type="button" @click="activeTab = 'eval'">Eval</button>
         </div>
@@ -134,6 +139,47 @@
               <dd>{{ check.missing_data.join('、') }}</dd>
               <dt>Sources</dt>
               <dd>{{ formatSourceIds(check.source_ids) }}</dd>
+            </dl>
+          </article>
+        </section>
+
+        <section v-if="activeTab === 'fundamentals'" class="tab-body">
+          <h3>Fundamentals</h3>
+          <p class="tab-note">public fixture only · available / partial / missing 分開呈現</p>
+          <div class="fundamental-summary">
+            <span>五大面向</span>
+            <strong>{{ fundamentalCoverageSummary }}</strong>
+          </div>
+          <article
+            v-for="category in fundamentalCategories"
+            :key="category.id"
+            class="fundamental-row"
+          >
+            <div class="health-row-header">
+              <strong>{{ category.name }}</strong>
+              <span class="status-chip" :class="`status-${category.coverage_status}`">
+                {{ category.coverage_status }}
+              </span>
+            </div>
+            <p>{{ category.category_takeaway }}</p>
+            <dl class="health-meta">
+              <dt>Metrics</dt>
+              <dd>
+                <ul class="metric-list">
+                  <li v-for="metric in category.metrics" :key="metric.id">
+                    <div>
+                      <strong>{{ metric.label }}</strong>
+                      <span>{{ formatMetricValue(metric) }}</span>
+                    </div>
+                    <span class="status-chip" :class="`status-${metric.coverage_status}`">
+                      {{ metric.coverage_status }}
+                    </span>
+                    <small>{{ formatSourceIds(metric.source_ids) }} · {{ metric.interpretation }}</small>
+                  </li>
+                </ul>
+              </dd>
+              <dt>Missing</dt>
+              <dd>{{ category.missing_data.join('、') }}</dd>
             </dl>
           </article>
         </section>
@@ -200,6 +246,16 @@ const healthGapSummary = computed(() => {
   return `${summary.unknown} unknown / ${summary.not_available} N/A`
 })
 
+const fundamentalCategories = computed(() => {
+  return result.value?.analysis?.fundamentals?.categories || []
+})
+
+const fundamentalCoverageSummary = computed(() => {
+  const summary = result.value?.analysis?.fundamentals?.summary
+  if (!summary) return 'N/A'
+  return `${summary.partial} partial / ${summary.missing} missing`
+})
+
 watch(result, (next) => {
   if (!next) return
   selectedStep.value = next.steps[0]
@@ -253,6 +309,14 @@ function formatPrice(value) {
 
 function formatSourceIds(sourceIds) {
   return sourceIds.length ? sourceIds.join(', ') : '無直接來源'
+}
+
+function formatMetricValue(metric) {
+  if (metric.value === null || metric.value === undefined) return '缺資料'
+  if (metric.unit === 'TWD_BN') return `${Number(metric.value).toFixed(2)} 十億元`
+  if (metric.unit === 'TWD') return `${Number(metric.value).toFixed(2)} 元`
+  if (metric.unit === 'percent') return `${Number(metric.value).toFixed(2)}%`
+  return `${metric.value} ${metric.unit}`
 }
 
 function renderMarkdown(markdown) {

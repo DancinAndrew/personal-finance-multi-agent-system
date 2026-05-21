@@ -32,6 +32,10 @@ Response includes:
 `analysis.health_checks` uses the conservative public fixture policy. It does
 not represent StatementDog login-gated or paid data.
 
+`analysis.fundamentals` preserves the existing EPS / Forward P/E valuation
+scenarios and adds a public-fixture-only financial quality snapshot. It is not a
+complete financial database.
+
 ## POST /api/research-runs
 
 用途：建立 deterministic research run。
@@ -107,6 +111,46 @@ Status enum:
 - `fail`：現有 fixture 足以支持未通過。
 - `unknown`：資料可能可補，但目前不足以判斷。
 - `not_available`：需要登入、付費、外部資料源，或第一版尚未納入。
+
+## Fundamental Snapshot Payload
+
+Fundamental Agent 會在完整 run response 的 `analysis.fundamentals` 回傳估值情境與五大基本面面向：
+
+```json
+{
+  "valuation_scenarios": [],
+  "summary": {
+    "categories_total": 5,
+    "available": 0,
+    "partial": 3,
+    "missing": 2,
+    "not_available": 0,
+    "data_policy": "public_fixture_only",
+    "major_gaps": ["毛利率", "現金流", "負債比", "週轉天數"]
+  },
+  "categories": [
+    {
+      "id": "revenue",
+      "name": "營收",
+      "coverage_status": "partial",
+      "category_takeaway": "已取得 2026 年 4 月營收、月增與年增線索，但尚未建立完整近 12 個月序列與產品別拆分。",
+      "metrics": [],
+      "missing_data": ["近 12 個月營收序列", "產品別營收"]
+    }
+  ],
+  "key_findings": [],
+  "data_gaps": []
+}
+```
+
+Coverage status enum:
+
+- `available`：fixture 內有數值與來源，足以作為該 metric 的公開線索。
+- `partial`：有方向性證據，但不足以做完整趨勢或品質判斷。
+- `missing`：資料理論上可由公開財報補齊，但目前 fixture 尚未納入。
+- `not_available`：需要登入、付費資料或目前 MVP 外能力。
+
+目前第一版只有 `revenue`、`profitability`、`growth` 是 `partial`；`safety` 與 `cash_flow_quality` 是 `missing`。報告不得把 EPS / Forward P/E 當成完整基本面品質，也不得用營收或 EPS 線索推論現金流已改善。
 
 ## Error Handling
 

@@ -15,6 +15,14 @@ class FileStore:
     """Read local fixtures for the deterministic MVP."""
 
     HEALTH_STATUSES = {"pass", "fail", "unknown", "not_available"}
+    FUNDAMENTAL_STATUSES = {"available", "partial", "missing", "not_available"}
+    FUNDAMENTAL_CATEGORY_IDS = {
+        "revenue",
+        "profitability",
+        "safety",
+        "growth",
+        "cash_flow_quality",
+    }
 
     def __init__(self, repo_root: Path) -> None:
         self.repo_root = repo_root
@@ -62,6 +70,89 @@ class FileStore:
             for criterion in check["criteria"]:
                 self._validate_health_status(criterion.get("status"))
                 self._validate_source_ids(criterion.get("source_ids", []), source_ids, criterion["id"])
+        return data
+
+    def load_fundamental_metrics(self) -> dict[str, Any]:
+        data = self._load_json("data/phison/fundamental_metrics_fixture.json")
+        if not isinstance(data, dict):
+            raise ValueError("fundamental_metrics_fixture.json must contain an object")
+
+        required_top_level = {"as_of_date", "data_policy", "categories"}
+        missing_top_level = required_top_level.difference(data)
+        if missing_top_level:
+            raise ValueError(
+                f"Fundamental metrics fixture missing fields: {sorted(missing_top_level)}"
+            )
+        if data["data_policy"] != "public_fixture_only":
+            raise ValueError("Fundamental metrics fixture must use public_fixture_only")
+        categories = data["categories"]
+        if not isinstance(categories, list):
+            raise ValueError("fundamental metrics categories must be a list")
+        if len(categories) != len(self.FUNDAMENTAL_CATEGORY_IDS):
+            raise ValueError(
+                "Fundamental metrics categories must contain exactly "
+                f"{len(self.FUNDAMENTAL_CATEGORY_IDS)} items"
+            )
+        category_ids = {category.get("id") for category in categories}
+        if category_ids != self.FUNDAMENTAL_CATEGORY_IDS:
+            raise ValueError(
+                "Fundamental metrics categories must be exactly "
+                f"{sorted(self.FUNDAMENTAL_CATEGORY_IDS)}"
+            )
+
+        source_ids = {source["id"] for source in self.load_source_catalog()}
+        category_required = {
+            "id",
+            "name",
+            "coverage_status",
+            "category_takeaway",
+            "metrics",
+            "missing_data",
+        }
+        metric_required = {
+            "id",
+            "label",
+            "period",
+            "value",
+            "unit",
+            "coverage_status",
+            "source_ids",
+            "interpretation",
+            "missing_data",
+        }
+        for category in categories:
+            category_id = category["id"]
+            missing = category_required.difference(category)
+            if missing:
+                raise ValueError(
+                    f"Fundamental category {category_id} missing fields: {sorted(missing)}"
+                )
+            self._validate_fundamental_status(category["coverage_status"])
+            if not isinstance(category["metrics"], list) or not category["metrics"]:
+                raise ValueError(f"Fundamental category {category_id} must contain metrics")
+            if not isinstance(category["missing_data"], list):
+                raise ValueError(f"Fundamental category {category_id} missing_data must be a list")
+            for metric in category["metrics"]:
+                metric_id = metric.get("id", "<missing>")
+                missing_metric_fields = metric_required.difference(metric)
+                if missing_metric_fields:
+                    raise ValueError(
+                        f"Fundamental metric {metric_id} missing fields: "
+                        f"{sorted(missing_metric_fields)}"
+                    )
+                self._validate_fundamental_status(metric["coverage_status"])
+                self._validate_source_ids(metric["source_ids"], source_ids, metric_id)
+                if metric["coverage_status"] == "available" and not metric["source_ids"]:
+                    raise ValueError(f"Available fundamental metric needs source_ids: {metric_id}")
+                if metric["value"] is None:
+                    if metric["coverage_status"] == "available":
+                        raise ValueError(
+                            f"Fundamental metric with null value cannot be available: {metric_id}"
+                        )
+                    if not metric["missing_data"]:
+                        raise ValueError(
+                            f"Fundamental metric with null value needs missing_data: {metric_id}"
+                        )
         return data
 
     def load_provenance(self) -> list[dict[str, Any]]:
@@ -119,6 +210,10 @@ class FileStore:
     def _validate_health_status(self, status: Any) -> None:
         if status not in self.HEALTH_STATUSES:
             raise ValueError(f"Invalid health check status: {status}")
+
+    def _validate_fundamental_status(self, status: Any) -> None:
+        if status not in self.FUNDAMENTAL_STATUSES:
+            raise ValueError(f"Invalid fundamental coverage status: {status}")
 
     def _validate_source_ids(
         self,

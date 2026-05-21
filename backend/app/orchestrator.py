@@ -57,6 +57,7 @@ class ResearchOrchestrator:
         provenance = self.store.load_provenance()
         rubric = self.store.load_rubric()
         health_check_fixture = self.store.load_health_checks()
+        fundamental_metrics = self.store.load_fundamental_metrics()
 
         steps: list[dict[str, Any]] = []
 
@@ -66,9 +67,19 @@ class ResearchOrchestrator:
         steps.append(retrieval.step)
         narrative = self.news_sector_agent.run(run_id)
         steps.append(narrative.step)
-        fundamentals = self.fundamental_agent.run(run_id, price, price_date)
+        fundamentals = self.fundamental_agent.run(
+            run_id,
+            price,
+            price_date,
+            fundamental_metrics,
+            sources,
+        )
         steps.append(fundamentals.step)
-        health_checks = self.health_check_agent.run(run_id, health_check_fixture)
+        health_checks = self.health_check_agent.run(
+            run_id,
+            health_check_fixture,
+            fundamentals.payload,
+        )
         steps.append(health_checks.step)
         risks = self.risk_agent.run(run_id)
         steps.append(risks.step)
@@ -89,6 +100,7 @@ class ResearchOrchestrator:
             rubric,
             len(provenance),
             health_checks.payload,
+            fundamentals.payload,
         )
         steps.append(evaluation.step)
 
