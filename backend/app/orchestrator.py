@@ -14,6 +14,7 @@ from .agents import (
     ReportGenerator,
     RiskAgent,
     SourceRetrieval,
+    ValuationAgent,
 )
 from .store import FileStore
 
@@ -27,6 +28,7 @@ class ResearchOrchestrator:
         self.source_retrieval = SourceRetrieval()
         self.news_sector_agent = NewsSectorAgent()
         self.fundamental_agent = FundamentalAgent()
+        self.valuation_agent = ValuationAgent()
         self.health_check_agent = HealthCheckAgent()
         self.risk_agent = RiskAgent()
         self.report_generator = ReportGenerator()
@@ -58,6 +60,7 @@ class ResearchOrchestrator:
         rubric = self.store.load_rubric()
         health_check_fixture = self.store.load_health_checks()
         fundamental_metrics = self.store.load_fundamental_metrics()
+        valuation_fixture = self.store.load_valuation_fixture()
 
         steps: list[dict[str, Any]] = []
 
@@ -75,10 +78,20 @@ class ResearchOrchestrator:
             sources,
         )
         steps.append(fundamentals.step)
+        valuation = self.valuation_agent.run(
+            run_id,
+            price,
+            price_date,
+            valuation_fixture,
+            fundamentals.payload,
+            sources,
+        )
+        steps.append(valuation.step)
         health_checks = self.health_check_agent.run(
             run_id,
             health_check_fixture,
             fundamentals.payload,
+            valuation.payload,
         )
         steps.append(health_checks.step)
         risks = self.risk_agent.run(run_id)
@@ -89,6 +102,7 @@ class ResearchOrchestrator:
             target,
             narrative.payload,
             fundamentals.payload,
+            valuation.payload,
             health_checks.payload,
             risks.payload,
             price_note,
@@ -101,6 +115,7 @@ class ResearchOrchestrator:
             len(provenance),
             health_checks.payload,
             fundamentals.payload,
+            valuation.payload,
         )
         steps.append(evaluation.step)
 
@@ -132,6 +147,7 @@ class ResearchOrchestrator:
                 "retrieval": retrieval.payload,
                 "narrative": narrative.payload,
                 "fundamentals": fundamentals.payload,
+                "valuation": valuation.payload,
                 "health_checks": health_checks.payload,
                 "risks": risks.payload,
             },

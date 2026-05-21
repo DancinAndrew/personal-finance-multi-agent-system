@@ -230,6 +230,87 @@ class FundamentalAgent:
         )
 
 
+class ValuationAgent:
+    """Build a conservative valuation snapshot separate from fundamentals."""
+
+    def run(
+        self,
+        run_id: str,
+        price: float,
+        price_date: str,
+        valuation_fixture: dict[str, Any],
+        fundamentals: dict[str, Any],
+        source_catalog: list[dict[str, Any]],
+    ) -> AgentResult:
+        catalog_ids = {source["id"] for source in source_catalog}
+        source_ids = _unique_source_ids(
+            _source_ids_from_valuation_fixture(valuation_fixture)
+            + [
+                source_id
+                for assumption in EPS_ASSUMPTIONS
+                for source_id in assumption["source_ids"]
+            ]
+        )
+        invalid_source_ids = set(source_ids).difference(catalog_ids)
+        if invalid_source_ids:
+            raise ValueError(f"Unknown valuation source ids: {sorted(invalid_source_ids)}")
+
+        def work() -> tuple[str, dict[str, Any]]:
+            scenarios = _build_valuation_scenarios(price, price_date)
+            multiples = _build_valuation_multiples(
+                valuation_fixture["multiples"],
+                scenarios,
+                price,
+                price_date,
+            )
+            broker_targets = _build_broker_targets(
+                valuation_fixture["broker_targets"],
+                price,
+                price_date,
+            )
+            data_gaps = _valuation_data_gaps(valuation_fixture, multiples)
+            coverage = _build_valuation_coverage(multiples, broker_targets)
+            summary = {
+                "data_policy": valuation_fixture["data_policy"],
+                "as_of_date": valuation_fixture["as_of_date"],
+                "price": price,
+                "price_as_of_date": price_date,
+                "is_live_market_data": False,
+                "coverage": coverage,
+                "major_gaps": data_gaps[:6],
+            }
+            interpretation = _build_valuation_interpretation(
+                scenarios,
+                broker_targets,
+                fundamentals,
+            )
+            return (
+                "建立 Forward P/E 與券商目標價敏感度，"
+                f"{coverage['partial']} partial、{coverage['missing']} missing；"
+                f"主要缺口為{'、'.join(summary['major_gaps'])}。",
+                {
+                    "summary": summary,
+                    "scenarios": scenarios,
+                    "multiples": multiples,
+                    "broker_targets": broker_targets,
+                    "data_gaps": data_gaps,
+                    "interpretation": interpretation,
+                },
+            )
+
+        return timed_step(
+            agent="valuation_agent",
+            run_id=run_id,
+            input_summary=(
+                f"使用示範股價 {price} 元（{price_date}，非即時行情）、"
+                "EPS assumptions 與公開券商摘要建立估值拆解。"
+            ),
+            source_ids=source_ids,
+            confidence=0.79,
+            work=work,
+        )
+
+
 class HealthCheckAgent:
     """Summarize conservative StatementDog-style health checks."""
 
@@ -238,11 +319,12 @@ class HealthCheckAgent:
         run_id: str,
         checks: list[dict[str, Any]],
         fundamentals: dict[str, Any] | None = None,
+        valuation: dict[str, Any] | None = None,
     ) -> AgentResult:
         source_ids = sorted({source_id for check in checks for source_id in check["source_ids"]})
 
         def work() -> tuple[str, dict[str, Any]]:
-            fundamental_alignment = _build_health_fundamental_alignment(fundamentals)
+            fundamental_alignment = _build_health_fundamental_alignment(fundamentals, valuation)
             summary = {
                 "total": len(checks),
                 "pass": _count_status(checks, "pass"),
@@ -308,6 +390,7 @@ class ReportGenerator:
         target: dict[str, Any],
         narrative: dict[str, Any],
         fundamentals: dict[str, Any],
+        valuation: dict[str, Any],
         health_checks: dict[str, Any],
         risks: dict[str, Any],
         price_note: str,
@@ -318,6 +401,7 @@ class ReportGenerator:
                 target=target,
                 thesis=narrative["thesis"],
                 fundamentals=fundamentals,
+                valuation=valuation,
                 health_checks=health_checks,
                 risks=risks["risks"],
                 price_note=price_note,
@@ -334,13 +418,18 @@ class ReportGenerator:
                     "evidence_page": "Valuation_EPS_Assumptions.md",
                 },
                 {
+                    "claim": "估值支撐需要同時觀察 EPS 敏感度、券商目標價區間與 P/B、殖利率、歷史估值缺口。",
+                    "source_ids": ["S4", "S5", "S6", "S8", "S10"],
+                    "evidence_page": "Valuation_EPS_Assumptions.md",
+                },
+                {
                     "claim": "CMoney 與新聞摘要不是完整券商研報。",
                     "source_ids": ["S4", "S6", "S8"],
                     "evidence_page": "Brokerage_View_Summary.md",
                 },
             ]
             return (
-                "產生一份偏中性偏多、含股票健診摘要、來源與風險邊界的研究輔助報告。",
+                "產生一份偏中性偏多、含估值拆解、股票健診摘要、來源與風險邊界的研究輔助報告。",
                 {"report_markdown": report, "claims": claims},
             )
 
@@ -365,6 +454,7 @@ class EvaluationAgent:
         provenance_count: int,
         health_checks: dict[str, Any] | None = None,
         fundamentals: dict[str, Any] | None = None,
+        valuation: dict[str, Any] | None = None,
     ) -> AgentResult:
         def work() -> tuple[str, dict[str, Any]]:
             hard_fail_hits = [
@@ -374,10 +464,16 @@ class EvaluationAgent:
                 hard_fail_hits.append("health_check_hallucination")
             if _fundamental_overclaim_is_hit(report_markdown):
                 hard_fail_hits.append("fundamental_overclaim")
+            if _valuation_overclaim_is_hit(report_markdown):
+                hard_fail_hits.append("valuation_overclaim")
             health_summary_missing = not _has_health_check_summary(report_markdown, health_checks)
             fundamental_breakdown_missing = not _has_fundamental_breakdown(
                 report_markdown,
                 fundamentals,
+            )
+            valuation_breakdown_missing = valuation is not None and not _has_valuation_breakdown(
+                report_markdown,
+                valuation,
             )
             dimensions = [
                 {"id": "source_grounding", "name": "來源 grounding", "score": 4.5},
@@ -389,7 +485,7 @@ class EvaluationAgent:
                 {"id": "user_usefulness", "name": "使用者可用性", "score": 4.5},
             ]
             total = round(sum(item["score"] for item in dimensions) / len(dimensions), 2)
-            if health_summary_missing or fundamental_breakdown_missing:
+            if health_summary_missing or fundamental_breakdown_missing or valuation_breakdown_missing:
                 total = min(total, 3.5)
             if hard_fail_hits:
                 total = min(total, 2.5)
@@ -399,12 +495,15 @@ class EvaluationAgent:
                 f"已有 {provenance_count} 筆 evidence provenance 可追溯重要 claim。",
                 "股票健診採 public fixture 保守輸出，缺資料時標示 unknown / not_available。",
                 "基本面拆解採五大面向 coverage，營收 / EPS 是 partial evidence，安全性與現金流仍缺資料。",
-                "仍需後續補正式 Q1 財報、現金流、股利、籌碼與長期估值區間。",
+                "估值拆解採 public fixture，目標價與 Forward P/E 只作敏感度，仍缺 P/B、殖利率、歷史估值與同業估值。",
+                "仍需後續補正式 Q1 財報、現金流、股利、籌碼、P/B、殖利率與長期估值區間。",
             ]
             if health_summary_missing:
                 notes.append("報告缺少完整股票健診摘要或未呈現七種健診，需補強。")
             if fundamental_breakdown_missing:
                 notes.append("報告缺少完整五大面向基本面拆解，需補營收、獲利、安全性、成長力與現金流品質。")
+            if valuation_breakdown_missing:
+                notes.append("報告缺少估值拆解，需補示範股價日期、Forward P/E 情境、券商目標價區間與估值缺口。")
             payload = {
                 "total_score": total,
                 "threshold": rubric["threshold"],
@@ -431,6 +530,7 @@ def _build_report(
     target: dict[str, Any],
     thesis: list[str],
     fundamentals: dict[str, Any],
+    valuation: dict[str, Any],
     health_checks: dict[str, Any],
     risks: list[str],
     price_note: str,
@@ -440,6 +540,12 @@ def _build_report(
     scenario_rows = "\n".join(
         f"| {item['label']} | {item['eps']:.2f} | {item['forward_pe']:.1f}x | {', '.join(item['source_ids'])} | {item['interpretation']} |"
         for item in scenarios
+    )
+    valuation_scenario_rows = _build_valuation_scenario_rows(valuation["scenarios"])
+    broker_target_rows = _build_broker_target_rows(valuation["broker_targets"])
+    valuation_gap_text = "、".join(valuation["summary"]["major_gaps"])
+    valuation_interpretation_rows = "\n".join(
+        f"- {item}" for item in valuation["interpretation"]
     )
     thesis_rows = "\n".join(f"- {item}" for item in thesis)
     fundamental_rows = _build_fundamental_rows(fundamentals["categories"])
@@ -478,6 +584,26 @@ def _build_report(
 | 情境 | 2026 EPS | Forward P/E | Sources | 解讀 |
 |---|---:|---:|---|---|
 {scenario_rows}
+
+## 估值拆解
+
+示範股價日期：{valuation['summary']['price_as_of_date']}；股價 {valuation['summary']['price']:.0f} 元，非即時行情。以下內容只做情境敏感度與資料缺口整理，不是合理價、目標價承諾或買賣建議。
+
+### Forward P/E 情境敏感度
+
+| 情境 | 2026 EPS | Forward P/E | Sources | 解讀 |
+|---|---:|---:|---|---|
+{valuation_scenario_rows}
+
+### 券商目標價區間
+
+| 來源 | 日期 | 目標價 / 區間 | 相對示範股價 | Sources | 可靠度限制 |
+|---|---|---|---|---|---|
+{broker_target_rows}
+
+估值缺口：{valuation_gap_text}。
+
+{valuation_interpretation_rows}
 
 ## 股票健診摘要
 
@@ -522,6 +648,22 @@ def _source_ids_from_fundamentals(snapshot: dict[str, Any]) -> list[str]:
         for metric in category["metrics"]
         for source_id in metric["source_ids"]
     ]
+
+
+def _source_ids_from_valuation_fixture(snapshot: dict[str, Any]) -> list[str]:
+    return (
+        list(snapshot["price"].get("source_ids", []))
+        + [
+            source_id
+            for multiple in snapshot["multiples"]
+            for source_id in multiple["source_ids"]
+        ]
+        + [
+            source_id
+            for target in snapshot["broker_targets"]
+            for source_id in target["source_ids"]
+        ]
+    )
 
 
 def _unique_source_ids(source_ids: list[str]) -> list[str]:
@@ -584,6 +726,7 @@ def _major_fundamental_gaps(categories: list[dict[str, Any]]) -> list[str]:
 
 def _build_health_fundamental_alignment(
     fundamentals: dict[str, Any] | None,
+    valuation: dict[str, Any] | None = None,
 ) -> dict[str, str]:
     if not fundamentals:
         return {}
@@ -601,7 +744,14 @@ def _build_health_fundamental_alignment(
             f"Cash-flow quality coverage is {cash_flow['coverage_status']}；"
             "地雷股健診仍需現金流與週轉資料。"
         )
-    alignment["value_stock"] = "Forward P/E 情境只作敏感度，不作便宜股健診通過判定。"
+    if valuation:
+        gaps = "、".join(valuation.get("summary", {}).get("major_gaps", []))
+        alignment["value_stock"] = (
+            "Valuation Agent 已提供情境敏感度，但便宜股健診仍維持 unknown；"
+            f"主要缺口為{gaps}。"
+        )
+    else:
+        alignment["value_stock"] = "Forward P/E 情境只作敏感度，不作便宜股健診通過判定。"
     return alignment
 
 
@@ -669,6 +819,153 @@ def _format_metric_sources(metrics: list[dict[str, Any]]) -> str:
     return ", ".join(source_ids) if source_ids else "無直接來源"
 
 
+def _build_valuation_scenarios(price: float, price_date: str) -> list[dict[str, Any]]:
+    scenarios = []
+    for assumption in EPS_ASSUMPTIONS:
+        scenarios.append(
+            {
+                **assumption,
+                "price": price,
+                "price_date": price_date,
+                "forward_pe": round(price / assumption["eps"], 1),
+                "coverage_status": "partial",
+            }
+        )
+    return scenarios
+
+
+def _build_valuation_multiples(
+    fixture_multiples: list[dict[str, Any]],
+    scenarios: list[dict[str, Any]],
+    price: float,
+    price_date: str,
+) -> list[dict[str, Any]]:
+    median_scenario = next(
+        scenario for scenario in scenarios if scenario["id"] == "factset_median"
+    )
+    multiples = []
+    for multiple in fixture_multiples:
+        item = dict(multiple)
+        if item["id"] == "forward_pe_factset_median":
+            item["value"] = median_scenario["forward_pe"]
+            item["price"] = price
+            item["price_date"] = price_date
+        multiples.append(item)
+    return multiples
+
+
+def _build_broker_targets(
+    fixture_targets: list[dict[str, Any]],
+    price: float,
+    price_date: str,
+) -> list[dict[str, Any]]:
+    targets = []
+    for target in fixture_targets:
+        item = dict(target)
+        item["price"] = price
+        item["price_date"] = price_date
+        item["coverage_status"] = "partial"
+        if "target_price" in item:
+            item["upside_pct"] = _pct_change(item["target_price"], price)
+        else:
+            price_range = item["target_price_range"]
+            item["low_upside_pct"] = _pct_change(price_range["low"], price)
+            item["high_upside_pct"] = _pct_change(price_range["high"], price)
+        targets.append(item)
+    return targets
+
+
+def _pct_change(target_price: float, price: float) -> float:
+    return round(((float(target_price) - price) / price) * 100, 1)
+
+
+def _valuation_data_gaps(
+    valuation_fixture: dict[str, Any],
+    multiples: list[dict[str, Any]],
+) -> list[str]:
+    gaps = list(valuation_fixture["missing_data"])
+    for multiple in multiples:
+        if multiple["coverage_status"] == "missing":
+            for missing in multiple["missing_data"]:
+                if missing not in gaps:
+                    gaps.append(missing)
+    return gaps
+
+
+def _build_valuation_coverage(
+    multiples: list[dict[str, Any]],
+    broker_targets: list[dict[str, Any]],
+) -> dict[str, int]:
+    statuses = ["available", "partial", "missing", "not_available"]
+    coverage = {status: 0 for status in statuses}
+    for multiple in multiples:
+        coverage[multiple["coverage_status"]] += 1
+    if broker_targets:
+        coverage["partial"] += 1
+    return coverage
+
+
+def _build_valuation_interpretation(
+    scenarios: list[dict[str, Any]],
+    broker_targets: list[dict[str, Any]],
+    fundamentals: dict[str, Any],
+) -> list[str]:
+    by_id = {scenario["id"]: scenario for scenario in scenarios}
+    target_prices = _target_price_values(broker_targets)
+    low_target = min(target_prices)
+    high_target = max(target_prices)
+    fundamental_gaps = "、".join(fundamentals["summary"]["major_gaps"][:4])
+    return [
+        "AI SSD 成長故事若要支撐目前估值，需要 EPS 接近 FactSet high 或群益 05/07 摘要高標，且毛利率與 NAND cycle 持續兌現。",
+        (
+            f"以示範股價計算，FactSet median EPS 對應 Forward P/E 約 "
+            f"{by_id['factset_median']['forward_pe']:.1f}x；群益高標摘要對應約 "
+            f"{by_id['capital_aggressive']['forward_pe']:.1f}x，兩者代表不同信心門檻。"
+        ),
+        (
+            f"公開摘要目標價大致落在 {low_target:.0f} 到 {high_target:.0f} 元區間；"
+            "這只能作市場預期參考，不是合理價或買賣建議。"
+        ),
+        f"估值判斷仍需補 {fundamental_gaps}，以及 P/B、殖利率、歷史估值與同業比較。",
+    ]
+
+
+def _target_price_values(broker_targets: list[dict[str, Any]]) -> list[float]:
+    values: list[float] = []
+    for target in broker_targets:
+        if "target_price" in target:
+            values.append(float(target["target_price"]))
+        else:
+            values.append(float(target["target_price_range"]["low"]))
+            values.append(float(target["target_price_range"]["high"]))
+    return values
+
+
+def _build_valuation_scenario_rows(scenarios: list[dict[str, Any]]) -> str:
+    return "\n".join(
+        f"| {item['label']} | {item['eps']:.2f} | {item['forward_pe']:.1f}x | "
+        f"{', '.join(item['source_ids'])} | {item['interpretation']} |"
+        for item in scenarios
+    )
+
+
+def _build_broker_target_rows(broker_targets: list[dict[str, Any]]) -> str:
+    rows = []
+    for target in broker_targets:
+        if "target_price" in target:
+            target_display = f"{target['target_price']:.0f} 元"
+            sensitivity = f"{target['upside_pct']:+.1f}%"
+        else:
+            price_range = target["target_price_range"]
+            target_display = f"{price_range['low']:.0f} 到 {price_range['high']:.0f} 元"
+            sensitivity = f"{target['low_upside_pct']:+.1f}% 到 {target['high_upside_pct']:+.1f}%"
+        rows.append(
+            f"| {target['source_label']} | {target['date']} | {target_display} | "
+            f"{sensitivity} | {', '.join(target['source_ids'])} | {target['reliability_note']} |"
+        )
+    return "\n".join(rows)
+
+
 def _build_health_check_rows(checks: list[dict[str, Any]]) -> str:
     rows = []
     for check in checks:
@@ -712,6 +1009,21 @@ def _has_fundamental_breakdown(
     )
 
 
+def _has_valuation_breakdown(
+    report_markdown: str,
+    valuation: dict[str, Any] | None,
+) -> bool:
+    if not valuation:
+        return False
+    if "估值拆解" not in report_markdown:
+        return False
+    required_phrases = ["示範股價日期", "非即時行情", "券商目標價區間"]
+    if not all(phrase in report_markdown for phrase in required_phrases):
+        return False
+    gaps = valuation.get("summary", {}).get("major_gaps", [])
+    return all(gap in report_markdown for gap in gaps[:3])
+
+
 def _health_check_hallucination_is_hit(report_markdown: str) -> bool:
     risky_phrases = [
         "已使用財報狗付費資料",
@@ -738,6 +1050,18 @@ def _fundamental_overclaim_is_hit(report_markdown: str) -> bool:
     return any(phrase in report_markdown for phrase in risky_phrases)
 
 
+def _valuation_overclaim_is_hit(report_markdown: str) -> bool:
+    risky_phrases = [
+        "3,080 元就是合理價",
+        "目標價就是買進理由",
+        "Forward P/E 證明便宜",
+        "CMoney 完整券商模型",
+        "估值已完整驗證",
+        "target upside 是買進理由",
+    ]
+    return any(phrase in report_markdown for phrase in risky_phrases)
+
+
 def _rule_is_hit(rule: str, report_markdown: str) -> bool:
     """Very small deterministic hard-fail scanner."""
 
@@ -748,11 +1072,13 @@ def _rule_is_hit(rule: str, report_markdown: str) -> bool:
     if "現在買" in rule:
         return "現在買" in report_markdown or "一定會漲" in report_markdown
     if "單一目標價" in rule:
-        return "3,080 元就是合理價" in report_markdown
+        return _valuation_overclaim_is_hit(report_markdown)
     if "過期股價" in rule:
         claims_live_price = "即時行情" in report_markdown and "不是即時行情" not in report_markdown
         lacks_date = "日期" not in report_markdown
         return claims_live_price or lacks_date
     if "partial" in rule or "missing" in rule or "Q1 EPS" in rule:
-        return _fundamental_overclaim_is_hit(report_markdown)
+        return _fundamental_overclaim_is_hit(report_markdown) or _valuation_overclaim_is_hit(
+            report_markdown
+        )
     return False

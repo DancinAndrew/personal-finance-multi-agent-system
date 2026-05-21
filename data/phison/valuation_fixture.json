@@ -1,0 +1,122 @@
+{
+  "as_of_date": "2026-05-10",
+  "data_policy": "public_fixture_only",
+  "price": {
+    "value": 2430,
+    "unit": "TWD",
+    "as_of_date": "2026-05-10",
+    "is_live_market_data": false,
+    "source_ids": []
+  },
+  "multiples": [
+    {
+      "id": "forward_pe_factset_median",
+      "label": "Forward P/E using FactSet median EPS",
+      "value": 13.2,
+      "unit": "x",
+      "coverage_status": "partial",
+      "source_ids": ["S5"],
+      "interpretation": "可用 FactSet 2026 EPS 中位數搭配示範股價做敏感度，但缺歷史 P/E percentile 與同業比較。",
+      "missing_data": ["五年 P/E percentile", "同業 Forward P/E"]
+    },
+    {
+      "id": "historical_pe_percentile",
+      "label": "Historical P/E percentile",
+      "value": null,
+      "unit": "percentile",
+      "coverage_status": "missing",
+      "source_ids": [],
+      "interpretation": "缺五年或十年歷史估值分位，不能判斷目前 P/E 是否位於長期低檔或高檔。",
+      "missing_data": ["五年 P/E percentile", "十年 P/E percentile"]
+    },
+    {
+      "id": "pb_ratio",
+      "label": "P/B",
+      "value": null,
+      "unit": "x",
+      "coverage_status": "missing",
+      "source_ids": [],
+      "interpretation": "缺每股淨值與股價淨值比，不能用資產基準檢查估值。",
+      "missing_data": ["每股淨值", "P/B", "五年 P/B 區間"]
+    },
+    {
+      "id": "dividend_yield",
+      "label": "Dividend yield",
+      "value": null,
+      "unit": "percent",
+      "coverage_status": "missing",
+      "source_ids": [],
+      "interpretation": "缺股利與殖利率資料，不能以收益率角度判斷估值支撐。",
+      "missing_data": ["現金股利", "近一年殖利率", "五年平均殖利率"]
+    },
+    {
+      "id": "peer_forward_pe",
+      "label": "Peer Forward P/E",
+      "value": null,
+      "unit": "x",
+      "coverage_status": "missing",
+      "source_ids": [],
+      "interpretation": "缺同業估值，不能判斷群聯相對控制器、NAND 或 SSD 供應鏈同業是否折價或溢價。",
+      "missing_data": ["同業名單", "同業 Forward P/E", "同業成長率差異"]
+    }
+  ],
+  "broker_targets": [
+    {
+      "id": "factset_consensus_target",
+      "source_label": "FactSet consensus via 鉅亨",
+      "target_price": 2454,
+      "unit": "TWD",
+      "date": "2026-05-04",
+      "source_ids": ["S5"],
+      "reliability_note": "FactSet 共識經新聞平台轉載，不是單一券商模型。"
+    },
+    {
+      "id": "capital_20260507_target",
+      "source_label": "CMoney 群益摘要",
+      "target_price": 3080,
+      "unit": "TWD",
+      "date": "2026-05-07",
+      "source_ids": ["S4"],
+      "reliability_note": "券商摘要，不是完整研報；不得把 3,080 元直接當合理價或買進建議。"
+    },
+    {
+      "id": "ftnn_20260411_target_range",
+      "source_label": "FTNN 法人目標價新聞",
+      "target_price_range": {
+        "low": 2240,
+        "high": 2564
+      },
+      "unit": "TWD",
+      "date": "2026-04-11",
+      "source_ids": ["S6"],
+      "reliability_note": "新聞彙整券商觀點；可確認公開來源出現過的目標價區間，不等於完整研報。"
+    },
+    {
+      "id": "cmoney_20260309_target_range",
+      "source_label": "CMoney 10 家券商區間摘要",
+      "target_price_range": {
+        "low": 1915,
+        "high": 2564
+      },
+      "unit": "TWD",
+      "date": "2026-03-09",
+      "source_ids": ["S8"],
+      "reliability_note": "CMoney 指出 10 家券商看多但未揭露完整名單；系統不得自行補齊券商名單。"
+    },
+    {
+      "id": "fubon_20260126_target",
+      "source_label": "CMoney 福邦投顧摘要",
+      "target_price": 2800,
+      "unit": "TWD",
+      "date": "2026-01-26",
+      "source_ids": ["S10"],
+      "reliability_note": "較早期券商摘要，僅作歷史參考，不應當成最新共識。"
+    }
+  ],
+  "missing_data": [
+    "歷史 P/E percentile",
+    "P/B",
+    "殖利率",
+    "同業估值"
+  ]
+}
