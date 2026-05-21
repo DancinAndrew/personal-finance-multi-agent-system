@@ -18,10 +18,12 @@
 1. Intent Router：確認是否為台股研究任務。
 2. Source Retrieval：讀取 source catalog、evidence pages、provenance。
 3. News / Sector Agent：整理 AI SSD 與 NAND 敘事。
-4. Fundamental Agent：計算 EPS 情境與 Forward P/E。
-5. Risk Agent：產生反方風險。
-6. Report Generator：產生研究輔助報告。
-7. Evaluation Agent：依 rubric 評分。
+4. Fundamental Agent：整理營收、獲利能力、安全性、成長力與現金流品質。
+5. Valuation Agent：用非即時示範股價、EPS 假設、公開券商摘要與缺口資料建立估值拆解。
+6. Health Check Agent：將七種股票健診轉成保守狀態、理由與資料缺口。
+7. Risk Agent：產生反方風險。
+8. Report Generator：產生研究輔助報告。
+9. Evaluation Agent：依 rubric 與 guardrails 評分。
 
 ## Data Sources
 
@@ -33,6 +35,8 @@ Rubric 包含：
 
 - 來源 grounding。
 - 財務與估值嚴謹度。
+- 基本面覆蓋與缺口誠實度。
+- 健診與資料缺口誠實度。
 - 產業敘事品質。
 - 風險與反方觀點。
 - 使用者可用性。
@@ -43,6 +47,7 @@ Rubric 包含：
 
 - 不提供買賣建議。
 - 不接即時行情。
+- 估值股價 fixture 不是即時行情，目標價與 Forward P/E 只作情境敏感度。
 - 不接真實 LLM。
 - 不接 Supabase。
 - 尚未納入正式券商研報全文。

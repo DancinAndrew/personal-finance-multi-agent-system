@@ -25,6 +25,8 @@ sequenceDiagram
   participant S as Source Retrieval
   participant N as News / Sector Agent
   participant F as Fundamental Agent
+  participant V as Valuation Agent
+  participant H as Health Check Agent
   participant K as Risk Agent
   participant G as Report Generator
   participant E as Evaluation Agent
@@ -34,7 +36,9 @@ sequenceDiagram
   O->>R: Classify intent
   O->>S: Load sources and evidence
   O->>N: Build AI SSD / NAND narrative
-  O->>F: Build EPS and valuation scenarios
+  O->>F: Build five-area fundamental snapshot
+  O->>V: Build valuation scenarios and target range
+  O->>H: Run conservative health checks
   O->>K: Generate opposing risks
   O->>G: Generate source-backed report
   O->>E: Score report

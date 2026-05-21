@@ -458,14 +458,55 @@ select {
   padding: 12px 0;
 }
 
-.fundamental-row:first-of-type {
+.fundamental-row:first-of-type,
+.valuation-row:first-of-type {
   padding-top: 0;
 }
 
-.fundamental-row p {
+.fundamental-row p,
+.valuation-row p {
   margin: 0;
   color: #39475c;
   font-size: 13px;
+}
+
+.valuation-meta {
+  display: grid;
+  gap: 5px;
+  margin: 0 0 14px;
+  border-radius: 6px;
+  padding: 10px 12px;
+  background: #fbfcfd;
+}
+
+.valuation-meta dt {
+  color: #6b778c;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.valuation-meta dd {
+  margin: -3px 0 6px;
+  overflow-wrap: anywhere;
+}
+
+.valuation-row {
+  display: grid;
+  gap: 8px;
+  border-bottom: 1px solid #eef2f6;
+  padding: 12px 0;
+}
+
+.gap-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+}
+
+.gap-list li {
+  overflow-wrap: anywhere;
 }
 
 .metric-list {

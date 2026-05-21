@@ -36,6 +36,11 @@ not represent StatementDog login-gated or paid data.
 scenarios and adds a public-fixture-only financial quality snapshot. It is not a
 complete financial database.
 
+`analysis.valuation` separates valuation analysis from fundamental quality. It
+uses non-live fixture price, EPS sensitivity, public brokerage summaries, and
+missing-data gaps. It is not real-time market data and not a complete brokerage
+model.
+
 ## POST /api/research-runs
 
 用途：建立 deterministic research run。
@@ -151,6 +156,40 @@ Coverage status enum:
 - `not_available`：需要登入、付費資料或目前 MVP 外能力。
 
 目前第一版只有 `revenue`、`profitability`、`growth` 是 `partial`；`safety` 與 `cash_flow_quality` 是 `missing`。報告不得把 EPS / Forward P/E 當成完整基本面品質，也不得用營收或 EPS 線索推論現金流已改善。
+
+## Valuation Payload
+
+Valuation Agent 會在完整 run response 的 `analysis.valuation` 回傳估值拆解：
+
+```json
+{
+  "summary": {
+    "data_policy": "public_fixture_only",
+    "price": 2430,
+    "price_as_of_date": "2026-05-10",
+    "is_live_market_data": false,
+    "coverage": {
+      "available": 0,
+      "partial": 2,
+      "missing": 4,
+      "not_available": 0
+    },
+    "major_gaps": ["歷史 P/E percentile", "P/B", "殖利率", "同業估值"]
+  },
+  "scenarios": [],
+  "multiples": [],
+  "broker_targets": [],
+  "data_gaps": [],
+  "interpretation": []
+}
+```
+
+重要限制：
+
+- `price_as_of_date` 必須顯示在 report / UI；`is_live_market_data` 第一版固定為 `false`。
+- `scenarios` 是 EPS 假設對 Forward P/E 的敏感度，不是合理價或買賣建議。
+- `broker_targets` 只整理公開新聞 / CMoney / FactSet 摘要，不代表完整券商模型。
+- P/B、殖利率、歷史 P/E percentile、同業估值目前是 `missing`，不得被寫成已完整驗證。
 
 ## Error Handling
 

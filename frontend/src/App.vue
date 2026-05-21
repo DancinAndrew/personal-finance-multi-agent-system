@@ -58,6 +58,10 @@
         <span class="label">Fundamentals</span>
         <strong>{{ fundamentalCoverageSummary }}</strong>
       </div>
+      <div>
+        <span class="label">Valuation</span>
+        <strong>{{ valuationCoverageSummary }}</strong>
+      </div>
     </section>
 
     <section v-if="result" class="workspace-grid">
@@ -92,6 +96,7 @@
         <div class="tabs" role="tablist">
           <button :class="{ active: activeTab === 'step' }" type="button" @click="activeTab = 'step'">Step</button>
           <button :class="{ active: activeTab === 'sources' }" type="button" @click="activeTab = 'sources'">Sources</button>
+          <button :class="{ active: activeTab === 'valuation' }" type="button" @click="activeTab = 'valuation'">Valuation</button>
           <button :class="{ active: activeTab === 'health' }" type="button" @click="activeTab = 'health'">Health</button>
           <button :class="{ active: activeTab === 'fundamentals' }" type="button" @click="activeTab = 'fundamentals'">Fundamentals</button>
           <button :class="{ active: activeTab === 'evidence' }" type="button" @click="activeTab = 'evidence'">Evidence</button>
@@ -141,6 +146,60 @@
               <dd>{{ formatSourceIds(check.source_ids) }}</dd>
             </dl>
           </article>
+        </section>
+
+        <section v-if="activeTab === 'valuation'" class="tab-body">
+          <h3>Valuation</h3>
+          <p class="tab-note">public fixture only · 非即時行情 · 目標價與 Forward P/E 只作情境敏感度</p>
+          <div class="fundamental-summary">
+            <span>估值覆蓋</span>
+            <strong>{{ valuationCoverageSummary }}</strong>
+          </div>
+          <dl class="valuation-meta">
+            <dt>示範股價</dt>
+            <dd>{{ formatPrice(valuationSummary.price || 0) }} · {{ valuationSummary.price_as_of_date }}</dd>
+            <dt>主要缺口</dt>
+            <dd>{{ valuationSummary.major_gaps?.join('、') || 'N/A' }}</dd>
+          </dl>
+
+          <h4>Forward P/E 情境</h4>
+          <article v-for="scenario in valuationScenarios" :key="scenario.id" class="valuation-row">
+            <div class="health-row-header">
+              <strong>{{ scenario.label }}</strong>
+              <span class="status-chip status-partial">{{ scenario.forward_pe }}x</span>
+            </div>
+            <dl class="health-meta">
+              <dt>EPS</dt>
+              <dd>{{ Number(scenario.eps).toFixed(2) }} 元</dd>
+              <dt>Sources</dt>
+              <dd>{{ formatSourceIds(scenario.source_ids) }}</dd>
+              <dt>解讀</dt>
+              <dd>{{ scenario.interpretation }}</dd>
+            </dl>
+          </article>
+
+          <h4>券商目標價摘要</h4>
+          <article v-for="target in brokerTargets" :key="target.id" class="valuation-row">
+            <div class="health-row-header">
+              <strong>{{ target.source_label }}</strong>
+              <span class="status-chip status-partial">{{ target.date }}</span>
+            </div>
+            <dl class="health-meta">
+              <dt>目標價</dt>
+              <dd>{{ formatTargetPrice(target) }}</dd>
+              <dt>敏感度</dt>
+              <dd>{{ formatTargetSensitivity(target) }}</dd>
+              <dt>Sources</dt>
+              <dd>{{ formatSourceIds(target.source_ids) }}</dd>
+              <dt>限制</dt>
+              <dd>{{ target.reliability_note }}</dd>
+            </dl>
+          </article>
+
+          <h4>缺口資料</h4>
+          <ul class="gap-list">
+            <li v-for="gap in valuationDataGaps" :key="gap">{{ gap }}</li>
+          </ul>
         </section>
 
         <section v-if="activeTab === 'fundamentals'" class="tab-body">
@@ -256,6 +315,28 @@ const fundamentalCoverageSummary = computed(() => {
   return `${summary.partial} partial / ${summary.missing} missing`
 })
 
+const valuationSummary = computed(() => {
+  return result.value?.analysis?.valuation?.summary || {}
+})
+
+const valuationCoverageSummary = computed(() => {
+  const coverage = valuationSummary.value?.coverage
+  if (!coverage) return 'N/A'
+  return `${coverage.partial} partial / ${coverage.missing} missing`
+})
+
+const valuationScenarios = computed(() => {
+  return result.value?.analysis?.valuation?.scenarios || []
+})
+
+const brokerTargets = computed(() => {
+  return result.value?.analysis?.valuation?.broker_targets || []
+})
+
+const valuationDataGaps = computed(() => {
+  return result.value?.analysis?.valuation?.data_gaps || []
+})
+
 watch(result, (next) => {
   if (!next) return
   selectedStep.value = next.steps[0]
@@ -317,6 +398,25 @@ function formatMetricValue(metric) {
   if (metric.unit === 'TWD') return `${Number(metric.value).toFixed(2)} 元`
   if (metric.unit === 'percent') return `${Number(metric.value).toFixed(2)}%`
   return `${metric.value} ${metric.unit}`
+}
+
+function formatTargetPrice(target) {
+  if (target.target_price_range) {
+    return `${formatPrice(target.target_price_range.low)} 到 ${formatPrice(target.target_price_range.high)}`
+  }
+  return formatPrice(target.target_price)
+}
+
+function formatTargetSensitivity(target) {
+  if (target.target_price_range) {
+    return `${formatPercent(target.low_upside_pct)} 到 ${formatPercent(target.high_upside_pct)}`
+  }
+  return formatPercent(target.upside_pct)
+}
+
+function formatPercent(value) {
+  if (value === null || value === undefined) return 'N/A'
+  return `${Number(value) >= 0 ? '+' : ''}${Number(value).toFixed(1)}%`
 }
 
 function renderMarkdown(markdown) {
