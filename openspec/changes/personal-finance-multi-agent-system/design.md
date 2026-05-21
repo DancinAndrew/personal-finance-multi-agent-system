@@ -682,6 +682,163 @@ Evaluation Agent 必須新增估值過度宣稱防護：
 - 若 report 把 Forward P/E 情境寫成公司便宜的完整證明，應 hard fail。
 - 若 report 清楚列出 target range、EPS sensitivity、price date 與缺口，應提高 valuation rigor 與 user usefulness。
 
+### 6.4 下一個 docs-first 切片：Chip Agent 規劃
+
+Chip Agent 是 Valuation Agent 之後的下一個切片。它的目的不是預測短線買賣點，也不是宣稱已取得財報狗或券商付費籌碼資料，而是把「籌碼面目前能不能被驗證」變成可追溯的資料覆蓋狀態。第一版應讓使用者看到：哪些籌碼資料需要登入 / 付費 / 外部資料源，哪些公開資料理論上可人工補齊，哪些完全不能在目前 MVP 判斷。
+
+#### 6.4.1 範圍與非範圍
+
+| 類別 | 決策 |
+|---|---|
+| 第一版資料策略 | 仍使用本機 public fixture，不接即時籌碼 API、不登入財報狗、不接券商分點或付費資料 |
+| 核心目標 | 建立 `analysis.chip`，呈現分點籌碼、大股東持股、董監持股、董監質押與股東人數的資料覆蓋與缺口 |
+| 新增輸出 | `analysis.chip.summary`、`analysis.chip.signals`、`analysis.chip.data_gaps`、`analysis.chip.interpretation` |
+| 與 Health Check 關係 | `chip_signal` 健診可消費 `analysis.chip`，但不得因資料缺口或單點線索就標為 `pass` |
+| 不允許行為 | 不得把缺資料寫成主力買超、外資進場、籌碼轉強、短線買點或籌碼健診通過 |
+| 延後事項 | 分點買賣超、三大法人每日買賣超、集保股權分散表自動化、董監持股 / 質押自動抓取、即時籌碼 API |
+
+#### 6.4.2 Chip coverage status 與 signal bias
+
+Chip Agent 使用 coverage status 描述「資料取得程度」，並使用 signal bias 描述「是否能形成籌碼訊號」。兩者不能混用。
+
+| Wire value | 中文顯示 | 語意 |
+|---|---|---|
+| `available` | 已取得 | fixture 有足夠來源與期間，可呈現該籌碼指標 |
+| `partial` | 部分取得 | 有單點或方向性線索，但不足以形成趨勢判斷 |
+| `missing` | 缺資料 | 公開資料理論上可人工整理，但目前 fixture 未納入 |
+| `not_available` | 目前不可用 | 需要登入、付費、外部資料源或超出第一版產品邊界 |
+
+Signal bias 固定 enum：
+
+| Wire value | 中文顯示 | 語意 |
+|---|---|---|
+| `bullish` | 偏多 | 資料足以支持籌碼面偏多 |
+| `bearish` | 偏空 | 資料足以支持籌碼面偏空 |
+| `neutral` | 中性 | 資料足以支持沒有明顯偏向 |
+| `mixed` | 分歧 | 不同籌碼指標互相矛盾 |
+| `unknown` | 不足判斷 | 資料不足，不能形成偏向 |
+| `not_available` | 目前不可用 | 沒有資料入口或權限 |
+
+第一版多數籌碼項目應保守標為 `missing` 或 `not_available`，而不是為了 demo 好看硬產生 `bullish` 或 `bearish`。
+
+#### 6.4.3 Chip fixture schema
+
+下一步實作應新增 `data/phison/chip_fixture.json`。建議 schema：
+
+```json
+{
+  "as_of_date": "2026-05-10",
+  "data_policy": "public_fixture_only",
+  "signals": [
+    {
+      "id": "broker_branch_flow",
+      "name": "分點籌碼",
+      "coverage_status": "not_available",
+      "signal_bias": "not_available",
+      "source_ids": [],
+      "lookback_window": "not_available",
+      "summary": "第一版未接分點買賣超資料，不能判斷主力或分點籌碼。",
+      "missing_data": ["分點買賣超", "主力買賣超", "近 5/20/60 日分點趨勢"],
+      "data_policy": "requires_external_or_paid_source"
+    }
+  ],
+  "missing_data": ["分點買賣超", "大股東持股", "董監持股", "董監質押", "股東人數"]
+}
+```
+
+欄位規則：
+
+- `signals` 必須剛好覆蓋五個面向：`broker_branch_flow`、`major_shareholders`、`director_holdings`、`director_pledges`、`shareholder_count`。
+- 每個 signal 必須有 `id`、`name`、`coverage_status`、`signal_bias`、`source_ids`、`lookback_window`、`summary`、`missing_data`、`data_policy`。
+- `coverage_status` 只能使用 `available`、`partial`、`missing`、`not_available`。
+- `signal_bias` 只能使用 `bullish`、`bearish`、`neutral`、`mixed`、`unknown`、`not_available`。
+- 若 `coverage_status` 是 `missing` 或 `not_available`，`signal_bias` 必須是 `unknown` 或 `not_available`。
+- `source_ids` 只能引用 source catalog 中已存在的 ID；若沒有可用來源，使用空陣列並在 `missing_data` 說明。
+
+#### 6.4.4 第一版籌碼資料覆蓋策略
+
+| Signal ID | 面向 | 第一版 expected coverage | 原因與缺口 |
+|---|---|---|---|
+| `broker_branch_flow` | 分點籌碼 | `not_available` | 需要分點買賣超、主力買賣超或券商分點資料，第一版不接 |
+| `major_shareholders` | 大股東持股 | `missing` | 公開資料理論上可補，但目前 fixture 未納入集保股權分散或大股東持股趨勢 |
+| `director_holdings` | 董監持股 | `missing` | 公開資料理論上可補，但目前 fixture 未納入董監持股月資料 |
+| `director_pledges` | 董監質押 | `missing` | 需要董監質押資料與趨勢，第一版尚未整理 |
+| `shareholder_count` | 股東人數 | `missing` | 需要股東人數月序列與級距變化，第一版尚未整理 |
+
+第一版整體 `overall_signal` 應為 `not_evaluable` 或 `unknown`，不得輸出「籌碼偏多 / 偏空」。
+
+#### 6.4.5 Chip Agent output contract
+
+擴充後的 default run 應新增：
+
+```json
+{
+  "analysis": {
+    "chip": {
+      "summary": {
+        "signals_total": 5,
+        "available": 0,
+        "partial": 0,
+        "missing": 4,
+        "not_available": 1,
+        "overall_signal": "not_evaluable",
+        "data_policy": "public_fixture_only",
+        "major_gaps": ["分點買賣超", "大股東持股", "董監持股", "董監質押", "股東人數"]
+      },
+      "signals": [],
+      "data_gaps": [],
+      "interpretation": []
+    }
+  }
+}
+```
+
+Agent step 的 `output_summary` 應說明：「建立 5 項籌碼資料覆蓋檢查，0 available、0 partial、4 missing、1 not_available；目前不能形成籌碼偏多或偏空訊號。」
+
+#### 6.4.6 Pipeline dependency
+
+Chip Agent 建議放在 Valuation Agent 之後、Health Check Agent 之前：
+
+- Valuation Agent 已完成估值情境，不依賴籌碼。
+- Chip Agent 產生 `analysis.chip`。
+- Health Check Agent 的 `chip_signal` 可以消費 `analysis.chip`，但若資料仍缺，`chip_signal` 必須維持 `not_available` 或 `unknown`。
+- Risk Agent 可使用 chip gaps，提醒「目前無法用籌碼面支持或反駁 thesis」。
+
+#### 6.4.7 報告整合
+
+Report Generator 必須新增「籌碼面摘要」段落，至少包含：
+
+- 五個籌碼面向的 coverage table。
+- 每個面向的 signal bias、summary、missing data 與 source IDs。
+- 整體訊號：若資料不足，必須寫 `not_evaluable` 或 `unknown`。
+- 明確註記：這不是分點、財報狗登入 / 付費資料或即時籌碼結果。
+
+報告不得：
+
+- 把 `missing` 或 `not_available` 寫成籌碼轉強。
+- 在沒有來源時寫主力買超、外資進場、大戶增加或散戶下降。
+- 把籌碼面當作買進、賣出或短線進出建議。
+- 因為籌碼資料缺失就省略該段落；缺口本身就是研究輸出。
+
+#### 6.4.8 前端整合
+
+前端應新增或擴充 `Chip` view：
+
+- 顯示 chip summary、overall signal、五個 signals、coverage status、signal bias、missing data、source IDs。
+- `missing` / `not_available` 必須視覺上和 `available` / `partial` 不同。
+- 若 overall signal 是 `not_evaluable`，UI 必須用中性語氣顯示「目前不能判斷籌碼偏向」。
+- mobile viewport 下，缺口文字、source IDs 與 summary 不得溢出。
+
+#### 6.4.9 評估整合
+
+Evaluation Agent 必須新增 chip overclaim guardrail：
+
+- 若 report 缺少「籌碼面摘要」，應降分或標 `needs_revision`。
+- 若五個籌碼面向沒有全部出現，應降分。
+- 若 report 在沒有來源的情況下宣稱分點買超、主力進場、大股東增加、董監持股增加或散戶下降，應 hard fail。
+- 若 report 宣稱使用財報狗付費 / 登入資料、券商分點資料或即時籌碼 API，但 fixture 沒有該來源，應 hard fail。
+- 若 report 清楚列出籌碼資料缺口，應提高 risk coverage 與 user usefulness。
+
 ## 7. Evidence Pack 研究證據層
 
 Evidence Pack 是本專案的研究證據層。它不是取代 RAG，也不是完整 knowledge graph；它把已整理來源轉成可讀、可連結、可審計的 Markdown pages，讓 agent 不必每次從 raw documents 重新拼答案。
@@ -908,4 +1065,4 @@ Evidence Pack 是本專案的研究證據層。它不是取代 RAG，也不是�
 
 ## 12. 建議的下一步
 
-下一步是依照 `tasks.md` 進入實作。第一個實作里程碑應先完成本機資料 fixture、Evidence Pack 頁面與 deterministic backend pipeline，然後再做 Vue 展示介面。
+下一步是依照 `tasks.md` 進入 Chip Agent 的 TDD 實作切片：先建立籌碼 fixture 與後端 RED tests，再串接 deterministic Chip Agent、report、evaluation 與 Vue `Chip` view。

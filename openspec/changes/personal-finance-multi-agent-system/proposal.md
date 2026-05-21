@@ -27,6 +27,8 @@ OpenSpec 文件預設使用繁體中文撰寫。若因 OpenSpec 格式需要保�
 - 保留既有 EPS / Forward P/E 情境，但將它和完整基本面品質分析分開，避免估值敏感度被誤解成完整基本面研究。
 - 新增下一個 docs-first 切片：Valuation Agent，將估值分析從基本面品質中分離，覆蓋 earnings multiples、券商目標價區間、情境敏感度，以及 P/B、殖利率、歷史估值資料缺口。
 - 要求 Valuation Agent 將目標價與 Forward P/E 視為假設與情境敏感度，而不是合理價證明、買進建議或股票便宜的證據。
+- 新增下一個 docs-first 切片：Chip Agent，將分點籌碼、大股東持股、董監持股、董監質押與股東人數整理成保守籌碼面 snapshot。
+- 要求 Chip Agent 在第一版維持本機 deterministic，遇到登入、付費、未納入 fixture 或不可驗證資料時標示 `missing` 或 `not_available`，不得把籌碼缺口包裝成主力進出、買賣訊號或健診通過。
 
 ## 能力範圍
 
@@ -36,6 +38,7 @@ OpenSpec 文件預設使用繁體中文撰寫。若因 OpenSpec 格式需要保�
 - `stock-health-check-agent`：定義七種投資視角的保守股票健診行為，包括資料缺口處理，以及如何整合到報告、trace 與 evaluation。
 - `fundamental-analysis-agent`：定義 deterministic 基本面分析行為，覆蓋營收、獲利能力、安全性、成長力與現金流品質，並包含 metric coverage status 與報告整合方式。
 - `valuation-analysis-agent`：定義 deterministic 估值分析行為，使用 public fixtures、明確 valuation coverage status、情境敏感度、source-backed broker target ranges 與 overclaim guardrails。
+- `chip-analysis-agent`：定義 deterministic 籌碼面分析行為，覆蓋分點、法人 / 主力線索、大股東、董監、質押與股東人數資料缺口，並約束不可把 unavailable chip data 寫成交易訊號。
 
 ### 修改能力
 

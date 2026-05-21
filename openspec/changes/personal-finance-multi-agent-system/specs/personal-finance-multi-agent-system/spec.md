@@ -323,6 +323,59 @@
 - **THEN** evaluation agent 必須將其視為 hard failure 或標記 report needs revision。
 - **AND** 若 price data 是 fixture-based 或 stale，report 必須寫出 price date，並避免 live-price language。
 
+### Requirement: 系統新增保守籌碼分析代理
+系統 MUST 新增 Chip Agent，產生 structured chip snapshot，且不得把 unavailable、missing 或未經來源驗證的籌碼資料寫成交易訊號。
+
+#### Scenario: Chip snapshot 被產生
+- **WHEN** default Phison research run 被產生
+- **THEN** `analysis.chip` 必須包含 `summary`、`signals`、`data_gaps` 與 `interpretation`。
+- **AND** `analysis.chip.signals` 必須剛好包含五個 signals：broker branch flow、major shareholders、director holdings、director pledges、shareholder count。
+- **AND** Chip Agent 必須記錄 data policy、source IDs、lookback window、coverage status、signal bias 與 missing data。
+
+#### Scenario: Chip coverage 被序列化
+- **WHEN** chip signal 透過 API 回傳或在 report 中使用
+- **THEN** coverage status 必須是 `available`、`partial`、`missing` 或 `not_available` 其中之一。
+- **AND** 當資料理論上可由公開資料人工整理、但目前 fixture 尚未納入時，系統必須使用 `missing`。
+- **AND** 當資料需要登入、付費、外部資料源或超出 MVP boundary 時，系統必須使用 `not_available`。
+
+#### Scenario: Chip signal bias 被序列化
+- **WHEN** chip signal 形成籌碼偏向
+- **THEN** signal bias 必須是 `bullish`、`bearish`、`neutral`、`mixed`、`unknown` 或 `not_available` 其中之一。
+- **AND** 若 coverage status 是 `missing`，signal bias 必須是 `unknown`。
+- **AND** 若 coverage status 是 `not_available`，signal bias 必須是 `not_available`。
+- **AND** 系統不得在缺乏足夠 source-backed data 時輸出 `bullish` 或 `bearish`。
+
+#### Scenario: 分點籌碼資料不可用
+- **WHEN** broker branch flow 需要分點買賣超、主力買賣超、券商分點或登入 / 付費資料，而 local fixture 沒有
+- **THEN** 系統必須將該 signal 標為 `not_available`。
+- **AND** report 與 UI 必須說明 current MVP 沒有 required source 或 permission。
+
+#### Scenario: 大股東與董監資料缺失
+- **WHEN** fixture 缺 major shareholder、director holding、director pledge 或 shareholder count sequence
+- **THEN** 系統必須將對應 signals 標為 `missing`。
+- **AND** 系統必須列出未來要補的公開資料欄位與期間。
+
+#### Scenario: Health Check Agent 消費 chip output
+- **WHEN** Health Check Agent 評估 `chip_signal`
+- **THEN** 它可以讀取 `analysis.chip`。
+- **AND** 若 `analysis.chip.summary.overall_signal` 是 `not_evaluable` 或 `unknown`，`chip_signal` health check 不得被標為 `pass`。
+- **AND** Health Check Agent 不得重新計算 chip metrics，只能消費 Chip Agent output 與 health-check fixture。
+
+#### Scenario: Chip report section 被產生
+- **WHEN** report generator 建立 research report
+- **THEN** report 必須包含「籌碼面摘要」，列出五個 chip signals、coverage statuses、signal biases、missing data 與 source IDs。
+- **AND** report 必須明確說明該段不是財報狗登入 / 付費資料、券商分點資料或即時籌碼結果。
+
+#### Scenario: Chip output 被顯示在 web app
+- **WHEN** web application 顯示 completed run
+- **THEN** 它必須提供 Chip view，顯示 chip summary、overall signal、signal rows、coverage status、signal bias、missing data 與 source IDs。
+- **AND** `missing` 與 `not_available` 必須在視覺上和 `available` / `partial` 可區分。
+
+#### Scenario: Chip overclaim 被偵測
+- **WHEN** report 在沒有 source-backed chip data 時宣稱分點買超、主力進場、大股東增加、董監持股增加、質押改善、散戶下降或籌碼轉強
+- **THEN** evaluation agent 必須將其視為 hard failure 或標記 report needs revision。
+- **AND** 若 report 宣稱使用 fixture 沒有的 paid、login-gated、broker-branch 或 live chip data，evaluation agent 也必須將其視為 hard failure。
+
 ### Requirement: 系統使用可追溯資料來源
 系統 MUST 將 retrieved documents 或 external data 產生的 claims 附上 source references。
 
