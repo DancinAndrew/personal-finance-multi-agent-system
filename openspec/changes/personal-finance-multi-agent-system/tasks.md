@@ -503,7 +503,7 @@
 
 ### 12.12 第二階段後續，但不在本切片
 
-- [ ] 新增 Valuation Agent，覆蓋 P/E、P/B、殖利率與情境估值。
+- [x] 將 Valuation Agent 提升為下一個 OpenSpec docs-first 切片，覆蓋 P/E、P/B、殖利率與情境估值。
 - [ ] 新增 Chip Agent，覆蓋分點、董監持股、董監質押、大股東持股與股東人數。
 - [ ] 新增 Technical Agent，補足財報狗較少覆蓋的價格、量能、動能與技術面。
 - [ ] 新增 Synthesis Agent，將消息面、基本面、技術面、籌碼面、估值面與風險面合成完整研究報告。
@@ -513,3 +513,162 @@
 
 - 使用者不需要逐頁閱讀財報儀表板，就能得到一份完整、有來源、有矛盾標記、有追蹤指標的研究報告。
 - 若某個健診或籌碼資料需要登入、付費或外部資料來源，系統必須標示資料缺口，不得假裝已完成檢核。
+
+## 13. Valuation Agent 規劃
+
+> 本節是下一個 docs-first 實作切片；目前只定義 OpenSpec，不代表已實作。
+
+### 13.1 Valuation Agent 實作前提
+
+- [x] 確認 Valuation Agent 的目標是估值分析，不再把 EPS / Forward P/E 藏在 Fundamental Agent 裡當作完整估值。
+- [x] 確認本切片第一版仍只使用本機 public fixture，不接即時行情、不接完整券商研報、不接付費資料。
+- [x] 確認既有 `analysis.fundamentals.valuation_scenarios` 需要保留相容性，直到 UI / report 遷移完成。
+- [x] 確認新的主要 output 應是 `analysis.valuation`。
+- [x] 確認目標價、Forward P/E、upside / downside 都只能作情境分析，不得輸出買賣建議。
+
+驗收標準：
+
+- 實作者能清楚知道 Valuation Agent 和 Fundamental Agent 的責任差異。
+- 下個 implementation slice 不需要重新決定資料契約或 guardrails。
+
+### 13.2 Valuation Fixture
+
+- [ ] 建立 `data/phison/valuation_fixture.json`。
+- [ ] fixture 必須包含 `as_of_date`、`data_policy`、`price`、`multiples`、`broker_targets`、`missing_data`。
+- [ ] `price` 必須包含 `value`、`unit`、`as_of_date`、`is_live_market_data`、`source_ids`。
+- [ ] 第一版 `price.is_live_market_data` 必須是 `false`。
+- [ ] `multiples` 必須至少覆蓋 Forward P/E 情境，並預留 P/B、殖利率、歷史 P/E percentile。
+- [ ] `broker_targets` 必須保留 target price、source label、date、source IDs 與 reliability note。
+- [ ] `source_ids` 必須引用已存在 source catalog ID。
+
+驗收標準：
+
+- fixture 能清楚區分可計算的 Forward P/E、公開券商摘要與缺資料項目。
+- fixture 不包含虛構券商模型、未揭露券商名單或即時股價。
+
+### 13.3 第一版資料覆蓋策略
+
+- [ ] Forward P/E scenarios 第一版標 `partial`，使用既有 EPS assumptions 與示範股價。
+- [ ] Broker target range 第一版標 `partial`，可引用 CMoney / 新聞公開摘要，但不得宣稱完整研報。
+- [ ] Historical P/E percentile 第一版標 `missing`。
+- [ ] P/B 第一版標 `missing`。
+- [ ] Dividend yield 第一版標 `missing`。
+- [ ] Peer valuation 第一版標 `missing`。
+- [ ] Upside / downside framing 第一版只能用 fixture price 和 target / scenario 做敏感度，不得作交易指令。
+
+驗收標準：
+
+- 估值輸出能回答「目前估值是否被支撐」而不是只列一串目標價。
+- 使用者能看到需要補哪些資料才能更有信心判斷估值。
+
+### 13.4 Store 與資料驗證
+
+- [ ] 在 file store 新增 valuation fixture loader。
+- [ ] loader 必須驗證 top-level schema、price schema、multiples schema、broker targets schema。
+- [ ] loader 或 agent 必須驗證 valuation coverage status 合法：`available`、`partial`、`missing`、`not_available`。
+- [ ] loader 或 agent 必須驗證 `source_ids` 存在於 source catalog。
+- [ ] loader 或 agent 必須驗證 `is_live_market_data = false` 時 report / UI 不能使用即時行情語言。
+
+驗收標準：
+
+- 壞的 valuation fixture 不會進入 report。
+- target price、source id、coverage status 或 price date 拼錯會被測試抓到。
+
+### 13.5 Valuation Agent Output
+
+- [ ] 新增 deterministic `ValuationAgent`。
+- [ ] Agent input：`run_id`、price fixture、valuation fixture、EPS assumptions / fundamentals payload、source catalog。
+- [ ] Agent output 必須包含 `summary`、`scenarios`、`multiples`、`broker_targets`、`data_gaps`、`interpretation`。
+- [ ] `summary` 必須包含 `data_policy`、`price_as_of_date`、`is_live_market_data`、coverage counts、`major_gaps`。
+- [ ] `scenarios` 必須清楚分 conservative / base / optimistic assumptions。
+- [ ] `interpretation` 必須用保守語氣說明 AI SSD story 要支撐目前估值，需要哪些 EPS / margin / NAND cycle 條件。
+- [ ] Agent step 的 `output_summary` 必須同時提到 Forward P/E、broker target range、coverage 與主要缺口。
+
+驗收標準：
+
+- `analysis.valuation` 能獨立被 UI、report、health check、evaluation 使用。
+- 既有 `analysis.fundamentals.valuation_scenarios` 不被移除。
+
+### 13.6 Orchestrator / API Contract
+
+- [ ] Orchestrator 讀取 valuation fixture 並傳入 Valuation Agent。
+- [ ] Valuation Agent 建議放在 Fundamental Agent 之後、Health Check Agent 之前。
+- [ ] 完整 run response 新增 `analysis.valuation`。
+- [ ] 不新增新的 API endpoint；沿用既有 run response。
+- [ ] 更新 `docs/api.md`，記錄 valuation payload 與資料限制。
+
+驗收標準：
+
+- 前端可以只靠現有 run payload 顯示 Valuation tab。
+- API 文件明確寫出 valuation 第一版不是即時行情，也不是完整券商模型。
+
+### 13.7 Health Check Agent Integration
+
+- [ ] `value_stock` 可讀取 `analysis.valuation`。
+- [ ] `value_stock` 不得因 Forward P/E 或 target upside 看起來好，就標為 `pass`。
+- [ ] 若 P/B、殖利率、歷史 P/E percentile 缺資料，`value_stock` 仍應維持 `unknown`。
+- [ ] Health Check Agent 不重新計算 valuation，只消費 Valuation Agent output 與 health check fixture。
+
+驗收標準：
+
+- 便宜股健診和 Valuation Agent 責任不重疊。
+- 健診結果不會把情境估值誤寫成已通過。
+
+### 13.8 Report Generator
+
+- [ ] 報告新增或擴充「估值拆解」段落。
+- [ ] 段落必須列出示範股價日期、Forward P/E scenarios、broker target range、missing valuation data。
+- [ ] 報告必須標示 EPS / target price / upside 是情境敏感度，不等同合理價或買賣建議。
+- [ ] 報告不得把單一目標價寫成合理價。
+- [ ] 報告不得把 Forward P/E 寫成股票便宜的完整證明。
+- [ ] 報告不得把 CMoney / 新聞摘要寫成完整券商研報。
+
+驗收標準：
+
+- 使用者能看到「如果採不同 EPS 假設，估值支撐程度會如何改變」。
+- 報告能清楚列出 P/B、殖利率、歷史估值與同業估值缺口。
+
+### 13.9 Evaluation Agent
+
+- [ ] rubric 新增或擴充 valuation overclaim guardrail。
+- [ ] 若 report 缺少「估值拆解」，evaluation 應降分或標 `needs_revision`。
+- [ ] 若 report 把單一目標價當合理價或買進建議，evaluation 應 hard fail。
+- [ ] 若 report 使用 fixture price 但沒有日期或非即時行情提醒，evaluation 應 hard fail 或重大扣分。
+- [ ] 若 report 把 Forward P/E 情境寫成股票便宜的完整證明，evaluation 應 hard fail。
+- [ ] 若 report 清楚列出 target range、EPS sensitivity、price date 與缺口，evaluation 應提高 valuation rigor / user usefulness。
+
+驗收標準：
+
+- evaluation 能抓出「用目標價或 Forward P/E 代替完整估值」的錯誤。
+- evaluation 能獎勵誠實列出估值缺口的報告。
+
+### 13.10 Frontend
+
+- [ ] detail panel 新增 `Valuation` tab，或在既有 detail panel 中新增 valuation view。
+- [ ] Valuation view 顯示 price fixture date、scenario table、broker target table、coverage status、source IDs、data gaps。
+- [ ] `available`、`partial`、`missing`、`not_available` 的樣式必須可區分。
+- [ ] Valuation view 應和 Fundamentals view 分區，避免混淆估值與基本面品質。
+- [ ] desktop 與 mobile viewport 下，target price、source IDs、missing data 不得溢出。
+
+驗收標準：
+
+- demo 時可以清楚解釋「估值目前能算什麼、不能算什麼」。
+- UI 不會讓使用者誤會 target upside 是買進訊號。
+
+### 13.11 TDD 與驗證
+
+- [ ] 先寫 RED tests，再實作 production code。
+- [ ] 後端測試：file store 能讀取 valuation fixture。
+- [ ] 後端測試：fixture schema、source IDs、coverage status、price date 合法。
+- [ ] 後端測試：default run 包含 `analysis.valuation.summary`、`scenarios`、`multiples`、`broker_targets`、`data_gaps`、`interpretation`。
+- [ ] 後端測試：default run 保留 `analysis.fundamentals.valuation_scenarios`。
+- [ ] 後端測試：report 包含「估值拆解」。
+- [ ] 後端測試：evaluation 能抓出 target price / Forward P/E overclaim。
+- [ ] Flask API 測試：default run endpoint 回傳 `analysis.valuation`。
+- [ ] 前端驗證：`npm run build` 成功。
+- [ ] 瀏覽器驗證：desktop / mobile Valuation tab 可讀、可操作、不溢出。
+
+驗收標準：
+
+- 實作完成前，不把 Valuation Agent 實作項目勾選為完成。
+- 測試能保護 valuation overclaim 與 price fixture 誠實度。

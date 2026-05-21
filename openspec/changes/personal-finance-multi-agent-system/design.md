@@ -519,6 +519,169 @@ Evaluation Agent 必須新增 fundamental coverage 檢查：
 - 若 report 使用 EPS 年化卻沒有說明限制，應 hard fail 或至少重大扣分。
 - 若 report 清楚列出營收、獲利、安全性、成長力、現金流品質與缺口，應提高 valuation rigor、risk coverage、user usefulness。
 
+### 6.3 下一個 docs-first 切片：Valuation Agent 規劃
+
+Valuation Agent 是 Fundamental Agent 之後的下一個切片。它的目的不是再多算一張 Forward P/E 表，而是把「估值是否支撐 AI SSD 成長故事」拆成可驗證的情境分析：目前市場價格、EPS 假設、券商目標價區間、歷史估值、P/B、殖利率與資料缺口。這個 Agent 必須把估值分析從基本面品質中分離出來，避免使用者把「有 EPS 情境」誤讀成「股票便宜」或「值得買」。
+
+#### 6.3.1 範圍與非範圍
+
+| 類別 | 決策 |
+|---|---|
+| 第一版資料策略 | 仍使用本機 public fixture，不接即時行情、不接券商完整研報、不接付費資料 |
+| 核心目標 | 建立 `analysis.valuation`，呈現 earnings multiple、broker target range、scenario sensitivity 與估值缺口 |
+| 仍保留 | `analysis.fundamentals.valuation_scenarios` 先保留相容性；新資料以 `analysis.valuation` 為主 |
+| 新增輸出 | `analysis.valuation.summary`、`analysis.valuation.scenarios`、`analysis.valuation.multiples`、`analysis.valuation.broker_targets`、`analysis.valuation.data_gaps`、`analysis.valuation.interpretation` |
+| 不允許行為 | 不得把單一目標價當合理價；不得把 Forward P/E 當便宜證明；不得把 CMoney / 新聞摘要當完整券商模型；不得用 fixture 股價寫成即時行情 |
+| 延後事項 | 即時行情、完整歷史 P/E percentile、P/B percentile、殖利率、同業估值、完整券商模型與 DCF |
+
+#### 6.3.2 Valuation coverage status
+
+Valuation Agent 使用和 Fundamental Agent 一樣的 coverage status，但語意聚焦於估值資料完整度：
+
+| Wire value | 中文顯示 | 估值語意 |
+|---|---|---|
+| `available` | 已取得 | fixture 有 source-backed 數值，可直接呈現 |
+| `partial` | 部分取得 | 可做方向性情境分析，但缺歷史區間、同業或多期驗證 |
+| `missing` | 缺資料 | 公開資料理論上可補，但本機 fixture 尚未納入 |
+| `not_available` | 目前不可用 | 需要付費、登入、外部資料源或超出本切片能力 |
+
+#### 6.3.3 Valuation fixture schema
+
+下一步實作應新增 `data/phison/valuation_fixture.json`。建議 schema：
+
+```json
+{
+  "as_of_date": "2026-05-10",
+  "data_policy": "public_fixture_only",
+  "price": {
+    "value": 2430,
+    "unit": "TWD",
+    "as_of_date": "2026-05-10",
+    "is_live_market_data": false,
+    "source_ids": []
+  },
+  "multiples": [
+    {
+      "id": "forward_pe_factset_median",
+      "label": "Forward P/E using FactSet median EPS",
+      "value": 13.2,
+      "unit": "x",
+      "coverage_status": "partial",
+      "source_ids": ["S5"],
+      "interpretation": "可做 EPS 情境敏感度，但缺歷史 P/E percentile 與同業比較。",
+      "missing_data": ["五年 P/E percentile", "同業 Forward P/E"]
+    }
+  ],
+  "broker_targets": [
+    {
+      "id": "capital_20260507_target",
+      "source_label": "CMoney 群益摘要",
+      "target_price": 3080,
+      "unit": "TWD",
+      "date": "2026-05-07",
+      "source_ids": ["S4"],
+      "reliability_note": "券商摘要，不是完整研報。"
+    }
+  ]
+}
+```
+
+欄位規則：
+
+- `price.is_live_market_data` 第一版必須是 `false`，report 必須顯示日期與 fixture 限制。
+- `multiples` 必須標出 `coverage_status` 與 `missing_data`。
+- `broker_targets` 必須保留來源層級與 reliability note。
+- 若 target range 來自未揭露完整券商名單的來源，系統不得自行補券商名單。
+- P/B、殖利率、歷史 P/E percentile 若 fixture 沒有值，必須出現在 `data_gaps`。
+
+#### 6.3.4 第一版估值資料覆蓋策略
+
+| 面向 | 第一版 expected coverage | 來源 / 缺口 |
+|---|---|---|
+| Forward P/E scenarios | `partial` | 使用既有 S3 / S4 / S5 EPS 假設與示範股價；缺歷史區間與同業比較 |
+| Broker target range | `partial` | 使用 S4 / S6 / S8 / S10 等公開摘要；不得聲稱完整研報 |
+| Historical P/E percentile | `missing` | 缺五年或十年歷史估值分位 |
+| P/B | `missing` | 缺每股淨值與股價淨值比 |
+| Dividend yield | `missing` | 缺股利、殖利率與股利政策 |
+| Downside / upside framing | `partial` | 可用 fixture price 與 target / scenario 做敏感度，但不能輸出交易指令 |
+
+#### 6.3.5 Valuation Agent output contract
+
+擴充後的 default run 應新增：
+
+```json
+{
+  "analysis": {
+    "valuation": {
+      "summary": {
+        "data_policy": "public_fixture_only",
+        "price_as_of_date": "2026-05-10",
+        "is_live_market_data": false,
+        "coverage": {
+          "available": 0,
+          "partial": 2,
+          "missing": 3,
+          "not_available": 0
+        },
+        "major_gaps": ["歷史 P/E percentile", "P/B", "殖利率", "同業估值"]
+      },
+      "scenarios": [],
+      "multiples": [],
+      "broker_targets": [],
+      "data_gaps": [],
+      "interpretation": []
+    }
+  }
+}
+```
+
+Agent step 的 `output_summary` 應說明估值覆蓋度，例如：「建立 Forward P/E 與券商目標價敏感度；2 partial、3 missing；主要缺口為歷史 P/E percentile、P/B、殖利率與同業估值。」
+
+#### 6.3.6 Pipeline dependency
+
+Valuation Agent 應在 Fundamental Agent 之後、Health Check Agent 之前或之後執行，實作時要明確選擇：
+
+- 若放在 Health Check 之前，`value_stock` 可以直接消費 `analysis.valuation`，判斷是否仍為 `unknown`。
+- 若放在 Health Check 之後，需在 report synthesis 時整合 valuation 與 health check。
+
+建議第一版放在 Fundamental Agent 之後、Health Check Agent 之前，因為 Health Check 的 `value_stock` 目前缺估值資料，可以自然改為消費 Valuation Agent output，但仍不得把 Forward P/E 情境當成便宜股通過。
+
+#### 6.3.7 Report integration
+
+Report Generator 必須新增或擴充「估值拆解」段落，至少包含：
+
+- price fixture 日期與非即時行情限制。
+- Forward P/E scenario table。
+- broker target range / target points table。
+- P/B、殖利率、歷史 P/E percentile、同業估值的缺口。
+- 一段保守 interpretation：AI SSD thesis 需要哪些 EPS / margin / NAND cycle 條件才可能支撐目前估值。
+
+報告不得：
+
+- 把 3,080 元或任何單一目標價寫成合理價。
+- 把 target upside 寫成買進理由。
+- 把 Forward P/E 看起來較低寫成股票便宜。
+- 把新聞摘要當完整券商模型。
+
+#### 6.3.8 Frontend integration
+
+前端應新增或擴充 `Valuation` view：
+
+- 顯示 valuation summary、price fixture date、scenario table、broker target table、data gaps。
+- `partial` / `missing` 必須視覺上不同。
+- Valuation view 可與 Fundamentals view 分開，避免使用者把基本面資料覆蓋與估值結論混在一起。
+- 若 price 是 fixture，UI 必須顯示「非即時行情」。
+
+#### 6.3.9 Evaluation integration
+
+Evaluation Agent 必須新增 valuation overclaim guardrail：
+
+- 若 report 缺少「估值拆解」，應降分或標 `needs_revision`。
+- 若 report 把單一目標價當合理價或買進建議，應 hard fail。
+- 若 report 用 fixture price 但沒有日期或非即時行情提醒，應 hard fail 或重大扣分。
+- 若 report 把 Forward P/E 情境寫成公司便宜的完整證明，應 hard fail。
+- 若 report 清楚列出 target range、EPS sensitivity、price date 與缺口，應提高 valuation rigor 與 user usefulness。
+
 ## 7. Evidence Pack 研究證據層
 
 Evidence Pack 是本專案的研究證據層。它不是取代 RAG，也不是完整 knowledge graph；它把已整理來源轉成可讀、可連結、可審計的 Markdown pages，讓 agent 不必每次從 raw documents 重新拼答案。

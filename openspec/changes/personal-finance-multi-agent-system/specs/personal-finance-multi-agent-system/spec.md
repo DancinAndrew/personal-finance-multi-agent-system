@@ -292,6 +292,37 @@ The system SHALL expand the Fundamental Agent beyond EPS and Forward P/E scenari
 - **THEN** the evaluation agent treats that as a hard failure or marks the report as needing revision.
 - **AND** the evaluation agent also penalizes reports that annualize Q1 EPS as a full-year forecast without warning.
 
+### Requirement: System separates valuation analysis from fundamental quality
+The system SHALL add a Valuation Agent that produces a structured valuation snapshot without treating valuation multiples, target prices, or broker summaries as proof of business quality or buy-worthiness.
+
+#### Scenario: Valuation snapshot is produced
+- **WHEN** the default Phison research run is generated
+- **THEN** `analysis.valuation` includes `summary`, `scenarios`, `multiples`, `broker_targets`, `data_gaps`, and `interpretation`.
+- **AND** existing `analysis.fundamentals.valuation_scenarios` remains available for backward compatibility until the UI and report are migrated.
+- **AND** the Valuation Agent records the price date and whether the price is fixture-based or live market data.
+
+#### Scenario: Valuation coverage is explicit
+- **WHEN** a valuation metric is returned through the API or used in the report
+- **THEN** its coverage status is one of `available`, `partial`, `missing`, or `not_available`.
+- **AND** Forward P/E from EPS assumptions may be marked `partial` when it lacks historical P/E distribution, peer comparison, or multi-year earnings validation.
+- **AND** P/B and dividend-yield checks are marked `missing` unless the fixture contains source-backed values.
+
+#### Scenario: Broker targets are source-backed assumptions
+- **WHEN** broker target prices or target-price ranges are shown
+- **THEN** the system records source IDs, publication dates, target price, broker or source label when available, and reliability notes.
+- **AND** CMoney or news summaries are labeled as summaries rather than full brokerage reports.
+- **AND** the system does not invent undisclosed broker names or model details.
+
+#### Scenario: Scenario sensitivity is reported
+- **WHEN** EPS, price, or target-price assumptions differ across sources
+- **THEN** the Valuation Agent reports a scenario matrix that separates conservative, base, and optimistic assumptions.
+- **AND** it explains which assumptions would need to be true for the AI SSD growth story to support the current valuation.
+
+#### Scenario: Valuation overclaim is detected
+- **WHEN** the report treats a single target price, Forward P/E, or upside percentage as fair-value proof, a buy recommendation, or proof that the stock is cheap
+- **THEN** the evaluation agent treats that as a hard failure or marks the report as needing revision.
+- **AND** if price data is fixture-based or stale, the report must state the price date and avoid live-price language.
+
 ### Requirement: System uses traceable data sources
 The system SHALL attach source references to claims that come from retrieved documents or external data.
 
