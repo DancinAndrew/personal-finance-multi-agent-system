@@ -20,6 +20,8 @@ node_modules/
 dist/
 build/
 .vite/
+test-results/
+frontend/test-results/
 
 # Logs and caches
 *.log
