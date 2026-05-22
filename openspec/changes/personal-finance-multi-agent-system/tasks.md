@@ -673,9 +673,9 @@
 - 實作完成前，不把 Valuation Agent 實作項目勾選為完成。
 - 測試能保護 valuation overclaim 與 price fixture 誠實度。
 
-## 14. Chip Agent 規劃
+## 14. Chip Agent 實作
 
-> 本節是下一個 docs-first 實作切片；目前只定義 OpenSpec，不代表已實作。
+> 本節已完成第一版 implementation；後續若要接自動資料源，需另開 OpenSpec change。
 
 ### 14.1 Chip Agent 實作前提
 
@@ -692,20 +692,20 @@
 
 ### 14.2 Chip Fixture
 
-- [ ] 建立 `data/phison/chip_fixture.json`。
-- [ ] fixture 必須包含 `as_of_date`、`data_policy`、`signals`、`missing_data`。
-- [ ] `signals` 必須剛好包含五個面向：
+- [x] 建立 `data/phison/chip_fixture.json`。
+- [x] fixture 必須包含 `as_of_date`、`data_policy`、`signals`、`missing_data`。
+- [x] `signals` 必須剛好包含五個面向：
   - `broker_branch_flow`
   - `major_shareholders`
   - `director_holdings`
   - `director_pledges`
   - `shareholder_count`
-- [ ] 每個 signal 必須包含 `id`、`name`、`coverage_status`、`signal_bias`、`source_ids`、`lookback_window`、`summary`、`missing_data`、`data_policy`。
-- [ ] `coverage_status` 必須是 `available`、`partial`、`missing`、`not_available`。
-- [ ] `signal_bias` 必須是 `bullish`、`bearish`、`neutral`、`mixed`、`unknown`、`not_available`。
-- [ ] 若 `coverage_status` 是 `missing`，`signal_bias` 必須是 `unknown`。
-- [ ] 若 `coverage_status` 是 `not_available`，`signal_bias` 必須是 `not_available`。
-- [ ] `source_ids` 必須引用已存在 source catalog ID。
+- [x] 每個 signal 必須包含 `id`、`name`、`coverage_status`、`signal_bias`、`source_ids`、`lookback_window`、`summary`、`missing_data`、`data_policy`。
+- [x] `coverage_status` 必須是 `available`、`partial`、`missing`、`not_available`。
+- [x] `signal_bias` 必須是 `bullish`、`bearish`、`neutral`、`mixed`、`unknown`、`not_available`。
+- [x] 若 `coverage_status` 是 `missing`，`signal_bias` 必須是 `unknown`。
+- [x] 若 `coverage_status` 是 `not_available`，`signal_bias` 必須是 `not_available`。
+- [x] `source_ids` 必須引用已存在 source catalog ID。
 
 驗收標準：
 
@@ -714,12 +714,12 @@
 
 ### 14.3 第一版資料覆蓋策略
 
-- [ ] `broker_branch_flow` 第一版標 `not_available`，原因是分點買賣超 / 主力資料需要外部或付費資料源。
-- [ ] `major_shareholders` 第一版標 `missing`，列出大股東持股比率與級距資料缺口。
-- [ ] `director_holdings` 第一版標 `missing`，列出董監持股月資料缺口。
-- [ ] `director_pledges` 第一版標 `missing`，列出董監質押資料缺口。
-- [ ] `shareholder_count` 第一版標 `missing`，列出股東人數月序列與級距變化缺口。
-- [ ] `overall_signal` 第一版必須是 `not_evaluable` 或 `unknown`，不得輸出籌碼偏多 / 偏空。
+- [x] `broker_branch_flow` 第一版標 `not_available`，原因是分點買賣超 / 主力資料需要外部或付費資料源。
+- [x] `major_shareholders` 第一版標 `missing`，列出大股東持股比率與級距資料缺口。
+- [x] `director_holdings` 第一版標 `missing`，列出董監持股月資料缺口。
+- [x] `director_pledges` 第一版標 `missing`，列出董監質押資料缺口。
+- [x] `shareholder_count` 第一版標 `missing`，列出股東人數月序列與級距變化缺口。
+- [x] `overall_signal` 第一版必須是 `not_evaluable` 或 `unknown`，不得輸出籌碼偏多 / 偏空。
 
 驗收標準：
 
@@ -728,12 +728,12 @@
 
 ### 14.4 Store 與資料驗證
 
-- [ ] 在 file store 新增 chip fixture loader。
-- [ ] loader 必須驗證 top-level schema 與五個 signal IDs。
-- [ ] loader 或 agent 必須驗證 coverage status 合法。
-- [ ] loader 或 agent 必須驗證 signal bias 合法。
-- [ ] loader 或 agent 必須驗證 `source_ids` 存在於 source catalog。
-- [ ] loader 或 agent 必須驗證 `missing` / `not_available` 不得搭配 `bullish` 或 `bearish`。
+- [x] 在 file store 新增 chip fixture loader。
+- [x] loader 必須驗證 top-level schema 與五個 signal IDs。
+- [x] loader 或 agent 必須驗證 coverage status 合法。
+- [x] loader 或 agent 必須驗證 signal bias 合法。
+- [x] loader 或 agent 必須驗證 `source_ids` 存在於 source catalog。
+- [x] loader 或 agent 必須驗證 `missing` / `not_available` 不得搭配 `bullish` 或 `bearish`。
 
 驗收標準：
 
@@ -742,12 +742,12 @@
 
 ### 14.5 Chip Agent Output
 
-- [ ] 新增 deterministic `ChipAgent`。
-- [ ] Agent input：`run_id`、chip fixture、source catalog。
-- [ ] Agent output 必須包含 `summary`、`signals`、`data_gaps`、`interpretation`。
-- [ ] `summary` 必須包含 `signals_total`、`available`、`partial`、`missing`、`not_available`、`overall_signal`、`data_policy`、`major_gaps`。
-- [ ] `interpretation` 必須用保守語氣說明目前不能用籌碼面支持或反駁 AI SSD / valuation thesis。
-- [ ] Agent step 的 `output_summary` 必須同時提到五個籌碼面向、coverage counts 與 overall signal。
+- [x] 新增 deterministic `ChipAgent`。
+- [x] Agent input：`run_id`、chip fixture、source catalog。
+- [x] Agent output 必須包含 `summary`、`signals`、`data_gaps`、`interpretation`。
+- [x] `summary` 必須包含 `signals_total`、`available`、`partial`、`missing`、`not_available`、`overall_signal`、`data_policy`、`major_gaps`。
+- [x] `interpretation` 必須用保守語氣說明目前不能用籌碼面支持或反駁 AI SSD / valuation thesis。
+- [x] Agent step 的 `output_summary` 必須同時提到五個籌碼面向、coverage counts 與 overall signal。
 
 驗收標準：
 
@@ -756,11 +756,11 @@
 
 ### 14.6 Orchestrator / API Contract
 
-- [ ] Orchestrator 讀取 chip fixture 並傳入 Chip Agent。
-- [ ] Chip Agent 建議放在 Valuation Agent 之後、Health Check Agent 之前。
-- [ ] 完整 run response 新增 `analysis.chip`。
-- [ ] 不新增新的 API endpoint；沿用既有 run response。
-- [ ] 更新 `docs/api.md`，記錄 chip payload 與資料限制。
+- [x] Orchestrator 讀取 chip fixture 並傳入 Chip Agent。
+- [x] Chip Agent 建議放在 Valuation Agent 之後、Health Check Agent 之前。
+- [x] 完整 run response 新增 `analysis.chip`。
+- [x] 不新增新的 API endpoint；沿用既有 run response。
+- [x] 更新 `docs/api.md`，記錄 chip payload 與資料限制。
 
 驗收標準：
 
@@ -769,10 +769,10 @@
 
 ### 14.7 Health Check Agent Integration
 
-- [ ] `chip_signal` 可讀取 `analysis.chip`。
-- [ ] `chip_signal` 不得因 `analysis.chip` 有五個 signals 就標為 `pass`。
-- [ ] 若 `overall_signal` 是 `not_evaluable` 或 `unknown`，`chip_signal` 必須維持 `not_available` 或 `unknown`。
-- [ ] Health Check Agent 不重新計算 chip metrics，只消費 Chip Agent output 與 health check fixture。
+- [x] `chip_signal` 可讀取 `analysis.chip`。
+- [x] `chip_signal` 不得因 `analysis.chip` 有五個 signals 就標為 `pass`。
+- [x] 若 `overall_signal` 是 `not_evaluable` 或 `unknown`，`chip_signal` 必須維持 `not_available` 或 `unknown`。
+- [x] Health Check Agent 不重新計算 chip metrics，只消費 Chip Agent output 與 health check fixture。
 
 驗收標準：
 
@@ -781,11 +781,11 @@
 
 ### 14.8 Report Generator
 
-- [ ] 報告新增「籌碼面摘要」段落。
-- [ ] 段落必須列出五個 signals、coverage status、signal bias、summary、missing data 與 source IDs。
-- [ ] 報告必須標示 chip 第一版來自本機 public fixture，不是財報狗登入 / 付費資料、券商分點資料或即時籌碼 API。
-- [ ] 報告不得把 `missing` 或 `not_available` 寫成籌碼轉強、主力進場、大股東增加或散戶下降。
-- [ ] 報告不得把籌碼面寫成買賣建議。
+- [x] 報告新增「籌碼面摘要」段落。
+- [x] 段落必須列出五個 signals、coverage status、signal bias、summary、missing data 與 source IDs。
+- [x] 報告必須標示 chip 第一版來自本機 public fixture，不是財報狗登入 / 付費資料、券商分點資料或即時籌碼 API。
+- [x] 報告不得把 `missing` 或 `not_available` 寫成籌碼轉強、主力進場、大股東增加或散戶下降。
+- [x] 報告不得把籌碼面寫成買賣建議。
 
 驗收標準：
 
@@ -794,12 +794,12 @@
 
 ### 14.9 評估代理（Evaluation Agent）
 
-- [ ] rubric 新增或擴充 chip overclaim guardrail。
-- [ ] 若 report 缺少「籌碼面摘要」，evaluation 應降分或標 `needs_revision`。
-- [ ] 若五個籌碼面向沒有全部出現，evaluation 應降分。
-- [ ] 若 report 在沒有來源時宣稱分點買超、主力進場、大股東增加、董監持股增加、質押改善、散戶下降或籌碼轉強，evaluation 應 hard fail。
-- [ ] 若 report 宣稱使用財報狗付費 / 登入資料、券商分點資料或即時籌碼 API，但 fixture 沒有該資料，evaluation 應 hard fail。
-- [ ] 若 report 清楚列出籌碼資料缺口，evaluation 應提高 risk coverage / user usefulness。
+- [x] rubric 新增或擴充 chip overclaim guardrail。
+- [x] 若 report 缺少「籌碼面摘要」，evaluation 應降分或標 `needs_revision`。
+- [x] 若五個籌碼面向沒有全部出現，evaluation 應降分。
+- [x] 若 report 在沒有來源時宣稱分點買超、主力進場、大股東增加、董監持股增加、質押改善、散戶下降或籌碼轉強，evaluation 應 hard fail。
+- [x] 若 report 宣稱使用財報狗付費 / 登入資料、券商分點資料或即時籌碼 API，但 fixture 沒有該資料，evaluation 應 hard fail。
+- [x] 若 report 清楚列出籌碼資料缺口，evaluation 應提高 risk coverage / user usefulness。
 
 驗收標準：
 
@@ -808,11 +808,11 @@
 
 ### 14.10 前端
 
-- [ ] detail panel 新增 `Chip` tab，或在既有 detail panel 中新增 chip view。
-- [ ] Chip view 顯示 overall signal、五個 signals、coverage status、signal bias、source IDs、missing data。
-- [ ] `available`、`partial`、`missing`、`not_available` 的樣式必須可區分。
-- [ ] `unknown` / `not_available` signal bias 不得被視覺設計成正向訊號。
-- [ ] desktop 與 mobile viewport 下，missing data、source IDs、summary 不得溢出。
+- [x] detail panel 新增 `Chip` tab，或在既有 detail panel 中新增 chip view。
+- [x] Chip view 顯示 overall signal、五個 signals、coverage status、signal bias、source IDs、missing data。
+- [x] `available`、`partial`、`missing`、`not_available` 的樣式必須可區分。
+- [x] `unknown` / `not_available` signal bias 不得被視覺設計成正向訊號。
+- [x] desktop 與 mobile viewport 下，missing data、source IDs、summary 不得溢出。
 
 驗收標準：
 
@@ -821,18 +821,18 @@
 
 ### 14.11 TDD 與驗證
 
-- [ ] 先寫 RED tests，再實作 production code。
-- [ ] 後端測試：file store 能讀取 chip fixture。
-- [ ] 後端測試：fixture schema、signal IDs、source IDs、coverage status、signal bias 合法。
-- [ ] 後端測試：`missing` / `not_available` 不得搭配 bullish / bearish signal bias。
-- [ ] 後端測試：default run 包含 `chip_agent` step。
-- [ ] 後端測試：default run 包含 `analysis.chip.summary`、`signals`、`data_gaps`、`interpretation`。
-- [ ] 後端測試：Health Check 的 `chip_signal` 不因 chip fixture 存在而變成 `pass`。
-- [ ] 後端測試：report 包含「籌碼面摘要」。
-- [ ] 後端測試：evaluation 能抓出 chip overclaim。
-- [ ] Flask API 測試：default run endpoint 回傳 `analysis.chip`。
-- [ ] 前端驗證：`npm run build` 成功。
-- [ ] 瀏覽器驗證：desktop / mobile Chip tab 可讀、可操作、不溢出。
+- [x] 先寫 RED tests，再實作 production code。
+- [x] 後端測試：file store 能讀取 chip fixture。
+- [x] 後端測試：fixture schema、signal IDs、source IDs、coverage status、signal bias 合法。
+- [x] 後端測試：`missing` / `not_available` 不得搭配 bullish / bearish signal bias。
+- [x] 後端測試：default run 包含 `chip_agent` step。
+- [x] 後端測試：default run 包含 `analysis.chip.summary`、`signals`、`data_gaps`、`interpretation`。
+- [x] 後端測試：Health Check 的 `chip_signal` 不因 chip fixture 存在而變成 `pass`。
+- [x] 後端測試：report 包含「籌碼面摘要」。
+- [x] 後端測試：evaluation 能抓出 chip overclaim。
+- [x] Flask API 測試：default run endpoint 回傳 `analysis.chip`。
+- [x] 前端驗證：`npm run build` 成功。
+- [x] 瀏覽器驗證：desktop / mobile Chip tab 可讀、可操作、不溢出。
 
 驗收標準：
 

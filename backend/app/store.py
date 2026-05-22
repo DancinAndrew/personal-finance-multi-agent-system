@@ -17,12 +17,28 @@ class FileStore:
     HEALTH_STATUSES = {"pass", "fail", "unknown", "not_available"}
     FUNDAMENTAL_STATUSES = {"available", "partial", "missing", "not_available"}
     VALUATION_STATUSES = {"available", "partial", "missing", "not_available"}
+    CHIP_COVERAGE_STATUSES = {"available", "partial", "missing", "not_available"}
+    CHIP_SIGNAL_BIASES = {
+        "bullish",
+        "bearish",
+        "neutral",
+        "mixed",
+        "unknown",
+        "not_available",
+    }
     FUNDAMENTAL_CATEGORY_IDS = {
         "revenue",
         "profitability",
         "safety",
         "growth",
         "cash_flow_quality",
+    }
+    CHIP_SIGNAL_IDS = {
+        "broker_branch_flow",
+        "major_shareholders",
+        "director_holdings",
+        "director_pledges",
+        "shareholder_count",
     }
 
     def __init__(self, repo_root: Path) -> None:
@@ -183,6 +199,69 @@ class FileStore:
         self._validate_broker_targets(data["broker_targets"], source_ids)
         return data
 
+    def load_chip_fixture(self) -> dict[str, Any]:
+        data = self._load_json("data/phison/chip_fixture.json")
+        if not isinstance(data, dict):
+            raise ValueError("chip_fixture.json must contain an object")
+
+        required_top_level = {"as_of_date", "data_policy", "signals", "missing_data"}
+        missing_top_level = required_top_level.difference(data)
+        if missing_top_level:
+            raise ValueError(f"Chip fixture missing fields: {sorted(missing_top_level)}")
+        if data["data_policy"] != "public_fixture_only":
+            raise ValueError("Chip fixture must use public_fixture_only")
+        if not isinstance(data["missing_data"], list):
+            raise ValueError("Chip fixture missing_data must be a list")
+        signals = data["signals"]
+        if not isinstance(signals, list):
+            raise ValueError("Chip fixture signals must be a list")
+        if len(signals) != len(self.CHIP_SIGNAL_IDS):
+            raise ValueError(
+                f"Chip fixture must contain exactly {len(self.CHIP_SIGNAL_IDS)} signals"
+            )
+        signal_ids = {signal.get("id") for signal in signals}
+        if signal_ids != self.CHIP_SIGNAL_IDS:
+            raise ValueError(f"Chip fixture signals must be exactly {sorted(self.CHIP_SIGNAL_IDS)}")
+
+        source_ids = {source["id"] for source in self.load_source_catalog()}
+        signal_required = {
+            "id",
+            "name",
+            "coverage_status",
+            "signal_bias",
+            "source_ids",
+            "lookback_window",
+            "summary",
+            "missing_data",
+            "data_policy",
+        }
+        for signal in signals:
+            signal_id = signal.get("id", "<missing>")
+            missing = signal_required.difference(signal)
+            if missing:
+                raise ValueError(f"Chip signal {signal_id} missing fields: {sorted(missing)}")
+            self._validate_chip_coverage_status(signal["coverage_status"])
+            self._validate_chip_signal_bias(signal["signal_bias"])
+            if not isinstance(signal["source_ids"], list):
+                raise ValueError(f"Chip signal {signal_id} source_ids must be a list")
+            if not isinstance(signal["missing_data"], list):
+                raise ValueError(f"Chip signal {signal_id} missing_data must be a list")
+            self._validate_source_ids(signal["source_ids"], source_ids, signal_id)
+            if signal["coverage_status"] == "missing" and signal["signal_bias"] != "unknown":
+                raise ValueError(f"Missing chip signal must have unknown bias: {signal_id}")
+            if (
+                signal["coverage_status"] == "not_available"
+                and signal["signal_bias"] != "not_available"
+            ):
+                raise ValueError(
+                    f"Not-available chip signal must have not_available bias: {signal_id}"
+                )
+            if signal["coverage_status"] in {"missing", "not_available"} and not signal[
+                "missing_data"
+            ]:
+                raise ValueError(f"Unavailable chip signal needs missing_data: {signal_id}")
+        return data
+
     def load_provenance(self) -> list[dict[str, Any]]:
         data = self._load_json("knowledge/phison/provenance.json")
         if not isinstance(data, list):
@@ -246,6 +325,14 @@ class FileStore:
     def _validate_valuation_status(self, status: Any) -> None:
         if status not in self.VALUATION_STATUSES:
             raise ValueError(f"Invalid valuation coverage status: {status}")
+
+    def _validate_chip_coverage_status(self, status: Any) -> None:
+        if status not in self.CHIP_COVERAGE_STATUSES:
+            raise ValueError(f"Invalid chip coverage status: {status}")
+
+    def _validate_chip_signal_bias(self, bias: Any) -> None:
+        if bias not in self.CHIP_SIGNAL_BIASES:
+            raise ValueError(f"Invalid chip signal bias: {bias}")
 
     def _validate_source_ids(
         self,

@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from typing import Any
 
 from .agents import (
+    ChipAgent,
     EvaluationAgent,
     FundamentalAgent,
     HealthCheckAgent,
@@ -29,6 +30,7 @@ class ResearchOrchestrator:
         self.news_sector_agent = NewsSectorAgent()
         self.fundamental_agent = FundamentalAgent()
         self.valuation_agent = ValuationAgent()
+        self.chip_agent = ChipAgent()
         self.health_check_agent = HealthCheckAgent()
         self.risk_agent = RiskAgent()
         self.report_generator = ReportGenerator()
@@ -61,6 +63,7 @@ class ResearchOrchestrator:
         health_check_fixture = self.store.load_health_checks()
         fundamental_metrics = self.store.load_fundamental_metrics()
         valuation_fixture = self.store.load_valuation_fixture()
+        chip_fixture = self.store.load_chip_fixture()
 
         steps: list[dict[str, Any]] = []
 
@@ -87,14 +90,17 @@ class ResearchOrchestrator:
             sources,
         )
         steps.append(valuation.step)
+        chip = self.chip_agent.run(run_id, chip_fixture, sources)
+        steps.append(chip.step)
         health_checks = self.health_check_agent.run(
             run_id,
             health_check_fixture,
             fundamentals.payload,
             valuation.payload,
+            chip.payload,
         )
         steps.append(health_checks.step)
-        risks = self.risk_agent.run(run_id)
+        risks = self.risk_agent.run(run_id, chip.payload)
         steps.append(risks.step)
         report = self.report_generator.run(
             run_id,
@@ -103,6 +109,7 @@ class ResearchOrchestrator:
             narrative.payload,
             fundamentals.payload,
             valuation.payload,
+            chip.payload,
             health_checks.payload,
             risks.payload,
             price_note,
@@ -116,6 +123,7 @@ class ResearchOrchestrator:
             health_checks.payload,
             fundamentals.payload,
             valuation.payload,
+            chip.payload,
         )
         steps.append(evaluation.step)
 
@@ -148,6 +156,7 @@ class ResearchOrchestrator:
                 "narrative": narrative.payload,
                 "fundamentals": fundamentals.payload,
                 "valuation": valuation.payload,
+                "chip": chip.payload,
                 "health_checks": health_checks.payload,
                 "risks": risks.payload,
             },

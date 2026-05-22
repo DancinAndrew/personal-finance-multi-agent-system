@@ -459,12 +459,14 @@ select {
 }
 
 .fundamental-row:first-of-type,
-.valuation-row:first-of-type {
+.valuation-row:first-of-type,
+.chip-row:first-of-type {
   padding-top: 0;
 }
 
 .fundamental-row p,
-.valuation-row p {
+.valuation-row p,
+.chip-row p {
   margin: 0;
   color: #39475c;
   font-size: 13px;
@@ -491,7 +493,8 @@ select {
   overflow-wrap: anywhere;
 }
 
-.valuation-row {
+.valuation-row,
+.chip-row {
   display: grid;
   gap: 8px;
   border-bottom: 1px solid #eef2f6;

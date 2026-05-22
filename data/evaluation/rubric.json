@@ -54,6 +54,8 @@
     "宣稱使用財報狗付費或登入資料，但 fixture 沒有該來源。",
     "把 unknown 或 not_available 的股票健診說成已完整通過或完整驗證。",
     "把 partial 或 missing 的 fundamental metric 說成已完整驗證。",
-    "把 Q1 EPS 年化為正式全年預估，或把 Forward P/E 當成公司便宜的完整證明。"
+    "把 Q1 EPS 年化為正式全年預估，或把 Forward P/E 當成公司便宜的完整證明。",
+    "在沒有來源時宣稱分點買超、主力進場、大股東增加、董監持股增加、質押改善、散戶下降或籌碼轉強。",
+    "宣稱使用 fixture 沒有的 paid、login-gated、broker-branch 或 live chip data。"
   ]
 }

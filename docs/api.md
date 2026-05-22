@@ -41,6 +41,12 @@ uses non-live fixture price, EPS sensitivity, public brokerage summaries, and
 missing-data gaps. It is not real-time market data and not a complete brokerage
 model.
 
+`analysis.chip` separates chip-data coverage from health-check labels. It uses
+only the local public fixture and reports whether branch flow, major
+shareholders, director holdings, director pledges, and shareholder count can be
+evaluated. It is not StatementDog login-gated or paid data, broker-branch data,
+or a live chip API result.
+
 ## POST /api/research-runs
 
 用途：建立 deterministic research run。
@@ -190,6 +196,50 @@ Valuation Agent 會在完整 run response 的 `analysis.valuation` 回傳估值�
 - `scenarios` 是 EPS 假設對 Forward P/E 的敏感度，不是合理價或買賣建議。
 - `broker_targets` 只整理公開新聞 / CMoney / FactSet 摘要，不代表完整券商模型。
 - P/B、殖利率、歷史 P/E percentile、同業估值目前是 `missing`，不得被寫成已完整驗證。
+
+## Chip Payload
+
+Chip Agent 會在完整 run response 的 `analysis.chip` 回傳籌碼資料覆蓋檢查：
+
+```json
+{
+  "summary": {
+    "data_policy": "public_fixture_only",
+    "as_of_date": "2026-05-10",
+    "signals_total": 5,
+    "coverage": {
+      "available": 0,
+      "partial": 0,
+      "missing": 4,
+      "not_available": 1
+    },
+    "available": 0,
+    "partial": 0,
+    "missing": 4,
+    "not_available": 1,
+    "overall_signal": "not_evaluable",
+    "major_gaps": ["分點買賣超", "大股東持股", "董監持股", "董監質押", "股東人數"]
+  },
+  "signals": [],
+  "data_gaps": [],
+  "interpretation": []
+}
+```
+
+Coverage status enum:
+
+- `available`：fixture 有足夠來源與期間，可呈現該籌碼指標。
+- `partial`：只有部分期間或部分來源，不能形成完整籌碼訊號。
+- `missing`：理論上可由公開資料人工補齊，但目前 fixture 尚未納入。
+- `not_available`：需要登入、付費、券商分點或外部資料源。
+
+Signal bias enum:
+
+- `bullish`、`bearish`、`neutral`、`mixed`：只有來源與期間足夠時才能使用。
+- `unknown`：coverage 是 `missing` 時使用。
+- `not_available`：coverage 是 `not_available` 時使用。
+
+第一版 `overall_signal` 固定為 `not_evaluable`；report / UI 不得把缺資料寫成分點買超、主力進場、大股東增加、籌碼轉強或買賣建議。
 
 ## Error Handling
 

@@ -1,0 +1,68 @@
+{
+  "as_of_date": "2026-05-10",
+  "data_policy": "public_fixture_only",
+  "signals": [
+    {
+      "id": "broker_branch_flow",
+      "name": "分點籌碼",
+      "coverage_status": "not_available",
+      "signal_bias": "not_available",
+      "source_ids": [],
+      "lookback_window": "not_available",
+      "summary": "第一版未接分點買賣超、主力買賣超或券商分點資料，不能判斷分點籌碼。",
+      "missing_data": ["分點買賣超", "主力買賣超", "近 5/20/60 日分點趨勢"],
+      "data_policy": "requires_external_or_paid_source"
+    },
+    {
+      "id": "major_shareholders",
+      "name": "大股東持股",
+      "coverage_status": "missing",
+      "signal_bias": "unknown",
+      "source_ids": [],
+      "lookback_window": "monthly_sequence_missing",
+      "summary": "公開資料理論上可人工整理，但目前 fixture 未納入大股東持股比率或級距變化。",
+      "missing_data": ["大股東持股比率", "集保股權分散級距", "近 3/6/12 個月趨勢"],
+      "data_policy": "public_source_not_curated"
+    },
+    {
+      "id": "director_holdings",
+      "name": "董監持股",
+      "coverage_status": "missing",
+      "signal_bias": "unknown",
+      "source_ids": [],
+      "lookback_window": "monthly_sequence_missing",
+      "summary": "目前 fixture 未納入董監持股月資料，不能判斷董監持股是否改善或惡化。",
+      "missing_data": ["董監持股股數", "董監持股比率", "近 12 個月變化"],
+      "data_policy": "public_source_not_curated"
+    },
+    {
+      "id": "director_pledges",
+      "name": "董監質押",
+      "coverage_status": "missing",
+      "signal_bias": "unknown",
+      "source_ids": [],
+      "lookback_window": "monthly_sequence_missing",
+      "summary": "目前 fixture 未納入董監質押資料，不能判斷質押壓力是否改善或惡化。",
+      "missing_data": ["董監質押股數", "董監質押比率", "近 12 個月變化"],
+      "data_policy": "public_source_not_curated"
+    },
+    {
+      "id": "shareholder_count",
+      "name": "股東人數",
+      "coverage_status": "missing",
+      "signal_bias": "unknown",
+      "source_ids": [],
+      "lookback_window": "monthly_sequence_missing",
+      "summary": "目前 fixture 未納入股東人數與級距資料，不能判斷籌碼集中或分散。",
+      "missing_data": ["股東人數月序列", "持股級距分布", "近 3/6/12 個月趨勢"],
+      "data_policy": "public_source_not_curated"
+    }
+  ],
+  "missing_data": [
+    "分點買賣超",
+    "大股東持股",
+    "董監持股",
+    "董監質押",
+    "股東人數"
+  ]
+}

@@ -26,6 +26,7 @@ sequenceDiagram
   participant N as News / Sector Agent
   participant F as Fundamental Agent
   participant V as Valuation Agent
+  participant C as Chip Agent
   participant H as Health Check Agent
   participant K as Risk Agent
   participant G as Report Generator
@@ -38,12 +39,15 @@ sequenceDiagram
   O->>N: Build AI SSD / NAND narrative
   O->>F: Build five-area fundamental snapshot
   O->>V: Build valuation scenarios and target range
-  O->>H: Run conservative health checks
-  O->>K: Generate opposing risks
+  O->>C: Build chip-data coverage snapshot
+  O->>H: Run conservative health checks with valuation and chip context
+  O->>K: Generate opposing risks with chip gaps
   O->>G: Generate source-backed report
   O->>E: Score report
   API-->>U: Return trace, sources, evidence, report, evaluation
 ```
+
+Chip Agent 第一版只讀 `data/phison/chip_fixture.json`，不登入財報狗、不接券商分點或即時籌碼 API。它輸出 `analysis.chip`，讓 UI、報告、Health Check Agent 與 Evaluation Agent 都能看到籌碼資料缺口；Health Check Agent 只消費這個 output，不重新計算籌碼 metrics。
 
 ## Evidence Pack
 

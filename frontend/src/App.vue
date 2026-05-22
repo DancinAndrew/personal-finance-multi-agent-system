@@ -62,6 +62,10 @@
         <span class="label">Valuation</span>
         <strong>{{ valuationCoverageSummary }}</strong>
       </div>
+      <div>
+        <span class="label">Chip</span>
+        <strong>{{ chipCoverageSummary }}</strong>
+      </div>
     </section>
 
     <section v-if="result" class="workspace-grid">
@@ -97,6 +101,7 @@
           <button :class="{ active: activeTab === 'step' }" type="button" @click="activeTab = 'step'">Step</button>
           <button :class="{ active: activeTab === 'sources' }" type="button" @click="activeTab = 'sources'">Sources</button>
           <button :class="{ active: activeTab === 'valuation' }" type="button" @click="activeTab = 'valuation'">Valuation</button>
+          <button :class="{ active: activeTab === 'chip' }" type="button" @click="activeTab = 'chip'">Chip</button>
           <button :class="{ active: activeTab === 'health' }" type="button" @click="activeTab = 'health'">Health</button>
           <button :class="{ active: activeTab === 'fundamentals' }" type="button" @click="activeTab = 'fundamentals'">Fundamentals</button>
           <button :class="{ active: activeTab === 'evidence' }" type="button" @click="activeTab = 'evidence'">Evidence</button>
@@ -199,6 +204,50 @@
           <h4>缺口資料</h4>
           <ul class="gap-list">
             <li v-for="gap in valuationDataGaps" :key="gap">{{ gap }}</li>
+          </ul>
+        </section>
+
+        <section v-if="activeTab === 'chip'" class="tab-body">
+          <h3>Chip</h3>
+          <p class="tab-note">public fixture only · 目前只呈現籌碼資料覆蓋與缺口，不判斷偏多偏空</p>
+          <div class="fundamental-summary">
+            <span>整體訊號</span>
+            <strong>{{ chipSummary.overall_signal || 'N/A' }}</strong>
+          </div>
+          <dl class="valuation-meta">
+            <dt>覆蓋狀態</dt>
+            <dd>{{ chipCoverageSummary }}</dd>
+            <dt>主要缺口</dt>
+            <dd>{{ chipSummary.major_gaps?.join('、') || 'N/A' }}</dd>
+          </dl>
+
+          <article v-for="signal in chipSignals" :key="signal.id" class="chip-row">
+            <div class="health-row-header">
+              <strong>{{ signal.name }}</strong>
+              <span class="status-chip" :class="`status-${signal.coverage_status}`">
+                {{ signal.coverage_status }}
+              </span>
+            </div>
+            <p>{{ signal.summary }}</p>
+            <dl class="health-meta">
+              <dt>Signal</dt>
+              <dd>
+                <span class="status-chip" :class="`status-${signal.signal_bias}`">
+                  {{ signal.signal_bias }}
+                </span>
+              </dd>
+              <dt>Window</dt>
+              <dd>{{ signal.lookback_window }}</dd>
+              <dt>Missing</dt>
+              <dd>{{ signal.missing_data.join('、') }}</dd>
+              <dt>Sources</dt>
+              <dd>{{ formatSourceIds(signal.source_ids) }}</dd>
+            </dl>
+          </article>
+
+          <h4>Interpretation</h4>
+          <ul class="gap-list">
+            <li v-for="item in chipInterpretation" :key="item">{{ item }}</li>
           </ul>
         </section>
 
@@ -337,6 +386,25 @@ const valuationDataGaps = computed(() => {
   return result.value?.analysis?.valuation?.data_gaps || []
 })
 
+const chipSummary = computed(() => {
+  return result.value?.analysis?.chip?.summary || {}
+})
+
+const chipSignals = computed(() => {
+  return result.value?.analysis?.chip?.signals || []
+})
+
+const chipCoverageSummary = computed(() => {
+  const summary = chipSummary.value
+  const coverage = summary?.coverage
+  if (!coverage) return 'N/A'
+  return `${summary.overall_signal} / ${coverage.missing} missing / ${coverage.not_available} N/A`
+})
+
+const chipInterpretation = computed(() => {
+  return result.value?.analysis?.chip?.interpretation || []
+})
+
 watch(result, (next) => {
   if (!next) return
   selectedStep.value = next.steps[0]
@@ -389,7 +457,8 @@ function formatPrice(value) {
 }
 
 function formatSourceIds(sourceIds) {
-  return sourceIds.length ? sourceIds.join(', ') : '無直接來源'
+  const ids = sourceIds || []
+  return ids.length ? ids.join(', ') : '無直接來源'
 }
 
 function formatMetricValue(metric) {
