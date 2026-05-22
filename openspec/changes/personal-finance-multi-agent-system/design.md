@@ -682,9 +682,9 @@ Evaluation Agent 必須新增估值過度宣稱防護：
 - 若 report 把 Forward P/E 情境寫成公司便宜的完整證明，應 hard fail。
 - 若 report 清楚列出 target range、EPS sensitivity、price date 與缺口，應提高 valuation rigor 與 user usefulness。
 
-### 6.4 下一個 docs-first 切片：Chip Agent 規劃
+### 6.4 Chip Agent 設計
 
-Chip Agent 是 Valuation Agent 之後的下一個切片。它的目的不是預測短線買賣點，也不是宣稱已取得財報狗或券商付費籌碼資料，而是把「籌碼面目前能不能被驗證」變成可追溯的資料覆蓋狀態。第一版應讓使用者看到：哪些籌碼資料需要登入 / 付費 / 外部資料源，哪些公開資料理論上可人工補齊，哪些完全不能在目前 MVP 判斷。
+Chip Agent 是 Valuation Agent 之後的切片。它的目的不是預測短線買賣點，也不是宣稱已取得財報狗或券商付費籌碼資料，而是把「籌碼面目前能不能被驗證」變成可追溯的資料覆蓋狀態。第一版應讓使用者看到：哪些籌碼資料需要登入 / 付費 / 外部資料源，哪些公開資料理論上可人工補齊，哪些完全不能在目前 MVP 判斷。
 
 #### 6.4.1 範圍與非範圍
 
@@ -838,6 +838,174 @@ Evaluation Agent 必須新增 chip overclaim guardrail：
 - 若 report 在沒有來源的情況下宣稱分點買超、主力進場、大股東增加、董監持股增加或散戶下降，應 hard fail。
 - 若 report 宣稱使用財報狗付費 / 登入資料、券商分點資料或即時籌碼 API，但 fixture 沒有該來源，應 hard fail。
 - 若 report 清楚列出籌碼資料缺口，應提高 risk coverage 與 user usefulness。
+
+### 6.5 下一個 docs-first 切片：Technical Agent 規劃
+
+Technical Agent 是 Chip Agent 之後的下一個切片。它的目的不是找短線買點，也不是把技術指標包裝成交易指令，而是把「價格趨勢、量能、均線、動能與波動風險目前能不能被驗證」變成 structured snapshot。第一版仍維持本機 deterministic：只有手動整理且可追溯來源的歷史價格 / 成交量資料才能形成技術訊號；缺資料時必須明確標示 `missing` 或 `not_available`。
+
+#### 6.5.1 範圍與非範圍
+
+| 類別 | 決策 |
+|---|---|
+| 第一版資料策略 | 仍使用本機 public fixture；不接即時行情 API、不接券商看盤軟體、不接付費技術指標資料 |
+| 核心目標 | 建立 `analysis.technical`，呈現價格趨勢、量能、均線結構、動能與波動風險的資料覆蓋與保守解讀 |
+| 新增輸出 | `analysis.technical.summary`、`analysis.technical.signals`、`analysis.technical.data_gaps`、`analysis.technical.interpretation` |
+| 與其他 agents 關係 | Technical Agent 不評估企業品質、不重新計算估值、不替代 Chip Agent；它只提供市場價格行為的獨立視角 |
+| 不允許行為 | 不得把缺資料寫成突破、量價齊揚、多頭排列、黃金交叉、短線買點、停損停利或交易指令 |
+| 延後事項 | 即時行情、盤中資料、完整 OHLCV 自動更新、技術指標 API、回測、策略績效、警示通知 |
+
+#### 6.5.2 Technical coverage status 與 technical bias
+
+Technical Agent 使用 coverage status 描述「技術資料取得程度」，使用 technical bias 描述「是否能形成技術面偏向」。兩者不能混用。
+
+| Wire value | 中文顯示 | 語意 |
+|---|---|---|
+| `available` | 已取得 | fixture 有足夠期間與來源，可計算該技術指標 |
+| `partial` | 部分取得 | 有單點或部分期間資料，但不足以形成完整趨勢判斷 |
+| `missing` | 缺資料 | 公開資料理論上可手動整理，但目前 fixture 尚未納入 |
+| `not_available` | 目前不可用 | 需要即時行情、盤中資料、登入、付費或外部資料源 |
+
+Technical bias 固定 enum：
+
+| Wire value | 中文顯示 | 語意 |
+|---|---|---|
+| `bullish` | 偏多 | 資料足以支持技術面偏多 |
+| `bearish` | 偏空 | 資料足以支持技術面偏空 |
+| `neutral` | 中性 | 資料足以支持沒有明顯偏向 |
+| `mixed` | 分歧 | 不同技術指標互相矛盾 |
+| `unknown` | 不足判斷 | 資料不足，不能形成偏向 |
+| `not_available` | 目前不可用 | 沒有資料入口、權限或超出第一版邊界 |
+
+第一版如果沒有足夠歷史 OHLCV，整體 `overall_signal` 應為 `not_evaluable` 或 `unknown`。不得為了讓 demo 好看硬產生 `bullish` 或 `bearish`。
+
+#### 6.5.3 Technical fixture schema
+
+下一步實作應新增 `data/phison/technical_fixture.json`。建議 schema：
+
+```json
+{
+  "as_of_date": "2026-05-10",
+  "data_policy": "public_fixture_only",
+  "price_data_policy": "manual_public_snapshot_only",
+  "signals": [
+    {
+      "id": "price_trend",
+      "name": "價格趨勢",
+      "coverage_status": "missing",
+      "technical_bias": "unknown",
+      "source_ids": [],
+      "lookback_window": "20_to_120_trading_days_missing",
+      "metric_values": {
+        "latest_close": null,
+        "return_20d_pct": null,
+        "return_60d_pct": null,
+        "return_120d_pct": null
+      },
+      "summary": "第一版尚未納入可追溯的歷史收盤價序列，不能判斷價格趨勢。",
+      "missing_data": ["20 日收盤價序列", "60 日收盤價序列", "120 日收盤價序列"],
+      "data_policy": "public_source_not_curated"
+    }
+  ],
+  "missing_data": ["歷史收盤價", "成交量序列", "均線", "動能指標", "波動指標"]
+}
+```
+
+欄位規則：
+
+- `signals` 必須剛好覆蓋五個面向：`price_trend`、`volume_trend`、`moving_average_structure`、`momentum`、`volatility_risk`。
+- 每個 signal 必須有 `id`、`name`、`coverage_status`、`technical_bias`、`source_ids`、`lookback_window`、`metric_values`、`summary`、`missing_data`、`data_policy`。
+- `coverage_status` 只能使用 `available`、`partial`、`missing`、`not_available`。
+- `technical_bias` 只能使用 `bullish`、`bearish`、`neutral`、`mixed`、`unknown`、`not_available`。
+- 若 `coverage_status` 是 `missing`，`technical_bias` 必須是 `unknown`。
+- 若 `coverage_status` 是 `not_available`，`technical_bias` 必須是 `not_available`。
+- `source_ids` 只能引用 source catalog 中已存在的 ID；若沒有可用來源，使用空陣列並在 `missing_data` 說明。
+- `metric_values` 可以包含 null，但 null metric 不得被 report 寫成已計算完成。
+
+#### 6.5.4 第一版技術資料覆蓋策略
+
+| Signal ID | 面向 | 第一版 expected coverage | 原因與缺口 |
+|---|---|---|---|
+| `price_trend` | 價格趨勢 | `missing` | 需要 20 / 60 / 120 日歷史收盤價序列；第一版尚未整理 |
+| `volume_trend` | 量能趨勢 | `missing` | 需要成交量序列、均量與量能變化；第一版尚未整理 |
+| `moving_average_structure` | 均線結構 | `missing` | 需要 MA20、MA60、MA120 與收盤價相對位置；第一版尚未整理 |
+| `momentum` | 動能 | `missing` | 需要報酬率區間、RSI、MACD 或其他動能 proxy；第一版尚未整理 |
+| `volatility_risk` | 波動風險 | `missing` | 需要 ATR、區間波動、最大回撤或高低價序列；第一版尚未整理 |
+
+若後續手動補入 public OHLCV snapshot，允許把部分 signals 改為 `partial`，但必須保留資料日期、來源與「非即時行情」提醒。只有當期間足夠、來源可追溯、指標可重算時，才允許 `available`。
+
+#### 6.5.5 Technical Agent output contract
+
+擴充後的 default run 應新增：
+
+```json
+{
+  "analysis": {
+    "technical": {
+      "summary": {
+        "signals_total": 5,
+        "available": 0,
+        "partial": 0,
+        "missing": 5,
+        "not_available": 0,
+        "overall_signal": "not_evaluable",
+        "data_policy": "public_fixture_only",
+        "price_data_policy": "manual_public_snapshot_only",
+        "major_gaps": ["歷史收盤價", "成交量序列", "均線", "動能指標", "波動指標"]
+      },
+      "signals": [],
+      "data_gaps": [],
+      "interpretation": []
+    }
+  }
+}
+```
+
+Agent step 的 `output_summary` 應說明：「建立 5 項技術面資料覆蓋檢查，0 available、0 partial、5 missing、0 not_available；overall_signal=not_evaluable，目前不能形成技術面偏多或偏空訊號。」
+
+#### 6.5.6 Pipeline dependency
+
+Technical Agent 建議放在 Chip Agent 之後、Health Check Agent 之前或之後都可行；第一版建議放在 Chip Agent 之後、Health Check Agent 之前，理由是：
+
+- Fundamental / Valuation / Chip 都不依賴技術面。
+- Technical Agent 產生 `analysis.technical`，提供獨立的市場行為視角。
+- Health Check Agent 第一版不重新計算 technical metrics；若後續要新增技術健診，只能消費 Technical Agent output。
+- Risk Agent 可使用 technical gaps，提醒「目前無法用技術面支持或反駁 thesis」。
+- Synthesis Agent 後續可以把技術面與基本面 / 估值 / 籌碼面分歧合併呈現。
+
+#### 6.5.7 報告整合
+
+Report Generator 必須新增「技術面摘要」段落，至少包含：
+
+- 五個技術面向的 coverage table。
+- 每個面向的 technical bias、summary、metric values、missing data 與 source IDs。
+- 整體訊號：若資料不足，必須寫 `not_evaluable` 或 `unknown`。
+- 明確註記：這不是即時行情、盤中技術指標、券商看盤軟體或交易策略結果。
+
+報告不得：
+
+- 把 `missing` 或 `not_available` 寫成突破、轉強、量價齊揚、多頭排列或黃金交叉。
+- 在沒有來源時寫站上均線、跌破支撐、買盤放量、動能轉強或波動收斂。
+- 把技術面當作買進、賣出、停損、停利或短線進出建議。
+- 因為技術資料缺失就省略該段落；缺口本身就是研究輸出。
+
+#### 6.5.8 前端整合
+
+前端應新增或擴充 `Technical` view：
+
+- 顯示 technical summary、overall signal、五個 signals、coverage status、technical bias、metric values、source IDs、missing data。
+- `missing` / `not_available` 必須視覺上和 `available` / `partial` 不同。
+- 若 overall signal 是 `not_evaluable`，UI 必須用中性語氣顯示「目前不能判斷技術面偏向」。
+- mobile viewport 下，長指標名稱、metric values、缺口文字與 source IDs 不得溢出。
+
+#### 6.5.9 評估整合
+
+Evaluation Agent 必須新增 technical overclaim guardrail：
+
+- 若 report 缺少「技術面摘要」，應降分或標 `needs_revision`。
+- 若五個技術面向沒有全部出現，應降分。
+- 若 report 在沒有 source-backed technical data 時宣稱突破、量價齊揚、多頭排列、黃金交叉、站上均線、動能轉強或波動收斂，應 hard fail。
+- 若 report 宣稱使用即時行情、盤中資料、券商看盤軟體、技術指標 API 或回測結果，但 fixture 沒有該來源，應 hard fail。
+- 若 report 清楚列出技術資料缺口，應提高 risk coverage 與 user usefulness。
 
 ## 7. Evidence Pack 研究證據層
 
@@ -1065,4 +1233,4 @@ Evidence Pack 是本專案的研究證據層。它不是取代 RAG，也不是�
 
 ## 12. 建議的下一步
 
-下一步是依照 `tasks.md` 進入 Chip Agent 的 TDD 實作切片：先建立籌碼 fixture 與後端 RED tests，再串接 deterministic Chip Agent、report、evaluation 與 Vue `Chip` view。
+下一步是依照 `tasks.md` 進入 Technical Agent 的 TDD 實作切片：先建立技術面 fixture 與後端 RED tests，再串接 deterministic Technical Agent、report、evaluation 與 Vue `Technical` view。第一版只做資料覆蓋與保守解讀，不接即時行情、盤中資料、技術指標 API 或交易策略回測。

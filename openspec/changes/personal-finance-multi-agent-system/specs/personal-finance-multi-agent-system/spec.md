@@ -376,6 +376,59 @@
 - **THEN** evaluation agent 必須將其視為 hard failure 或標記 report needs revision。
 - **AND** 若 report 宣稱使用 fixture 沒有的 paid、login-gated、broker-branch 或 live chip data，evaluation agent 也必須將其視為 hard failure。
 
+### Requirement: 系統新增保守技術分析代理
+系統 MUST 新增 Technical Agent，產生 structured technical snapshot，且不得把 unavailable、missing、stale 或未經來源驗證的技術資料寫成短線交易訊號。
+
+#### Scenario: Technical snapshot 被產生
+- **WHEN** default Phison research run 被產生
+- **THEN** `analysis.technical` 必須包含 `summary`、`signals`、`data_gaps` 與 `interpretation`。
+- **AND** `analysis.technical.signals` 必須剛好包含五個 signals：price trend、volume trend、moving average structure、momentum、volatility risk。
+- **AND** Technical Agent 必須記錄 data policy、price data policy、source IDs、lookback window、coverage status、technical bias、metric values 與 missing data。
+
+#### Scenario: Technical coverage 被序列化
+- **WHEN** technical signal 透過 API 回傳或在 report 中使用
+- **THEN** coverage status 必須是 `available`、`partial`、`missing` 或 `not_available` 其中之一。
+- **AND** 當資料理論上可由公開歷史行情人工整理、但目前 fixture 尚未納入時，系統必須使用 `missing`。
+- **AND** 當資料需要即時行情、盤中資料、登入、付費、外部資料源或超出 MVP boundary 時，系統必須使用 `not_available`。
+
+#### Scenario: Technical bias 被序列化
+- **WHEN** technical signal 形成技術面偏向
+- **THEN** technical bias 必須是 `bullish`、`bearish`、`neutral`、`mixed`、`unknown` 或 `not_available` 其中之一。
+- **AND** 若 coverage status 是 `missing`，technical bias 必須是 `unknown`。
+- **AND** 若 coverage status 是 `not_available`，technical bias 必須是 `not_available`。
+- **AND** 系統不得在缺乏足夠 source-backed OHLCV 或 technical metric data 時輸出 `bullish` 或 `bearish`。
+
+#### Scenario: 歷史價格資料缺失
+- **WHEN** fixture 缺少 20 / 60 / 120 trading days 的可追溯歷史收盤價
+- **THEN** 系統必須將 `price_trend` 標為 `missing` 或 `not_available`。
+- **AND** report 與 UI 必須說明 current MVP 沒有足夠 historical close series 判斷價格趨勢。
+
+#### Scenario: 量能、均線、動能與波動資料缺失
+- **WHEN** fixture 缺成交量序列、均線、RSI / MACD / return window 或 volatility metrics
+- **THEN** 系統必須將對應 technical signals 標為 `missing`。
+- **AND** 系統必須列出未來要補的公開資料欄位、期間與計算方式。
+
+#### Scenario: Technical Agent 與其他代理責任邊界
+- **WHEN** Technical Agent 產生 technical snapshot
+- **THEN** 它不得重新評估企業品質、估值便宜程度或籌碼集中程度。
+- **AND** Health Check Agent 若需要技術資料，只能消費 Technical Agent output，不得自行重算 technical metrics。
+- **AND** Risk Agent 可以使用 technical gaps 說明「目前無法用技術面支持或反駁 thesis」。
+
+#### Scenario: Technical report section 被產生
+- **WHEN** report generator 建立 research report
+- **THEN** report 必須包含「技術面摘要」，列出五個 technical signals、coverage statuses、technical biases、metric values、missing data 與 source IDs。
+- **AND** report 必須明確說明該段不是即時行情、盤中技術指標、券商看盤軟體或交易策略回測結果。
+
+#### Scenario: Technical output 被顯示在 web app
+- **WHEN** web application 顯示 completed run
+- **THEN** 它必須提供 Technical view，顯示 technical summary、overall signal、signal rows、coverage status、technical bias、metric values、missing data 與 source IDs。
+- **AND** `missing` 與 `not_available` 必須在視覺上和 `available` / `partial` 可區分。
+
+#### Scenario: Technical overclaim 被偵測
+- **WHEN** report 在沒有 source-backed technical data 時宣稱突破、量價齊揚、多頭排列、黃金交叉、站上均線、動能轉強、波動收斂或短線買點
+- **THEN** evaluation agent 必須將其視為 hard failure 或標記 report needs revision。
+- **AND** 若 report 宣稱使用 fixture 沒有的 live market data、intraday data、technical indicator API、broker terminal 或 backtest result，evaluation agent 也必須將其視為 hard failure。
+
 ### Requirement: 系統使用可追溯資料來源
 系統 MUST 將 retrieved documents 或 external data 產生的 claims 附上 source references。
 
