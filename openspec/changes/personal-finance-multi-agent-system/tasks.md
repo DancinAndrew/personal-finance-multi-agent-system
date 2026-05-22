@@ -839,9 +839,9 @@
 - 實作完成前，不把 Chip Agent 實作項目勾選為完成。
 - 測試能保護 chip overclaim 與籌碼資料缺口誠實度。
 
-## 15. Technical Agent 規劃
+## 15. Technical Agent 實作
 
-> 本節是下一個 docs-first 實作切片；目前只定義 OpenSpec，不代表已實作。
+> 本節已完成 deterministic Technical Agent 最小切片；瀏覽器視覺驗證因本機 Playwright browser binary 尚未可用而保留為未完成。
 
 ### 15.1 Technical Agent 實作前提
 
@@ -858,21 +858,21 @@
 
 ### 15.2 Technical Fixture
 
-- [ ] 建立 `data/phison/technical_fixture.json`。
-- [ ] fixture 必須包含 `as_of_date`、`data_policy`、`price_data_policy`、`signals`、`missing_data`。
-- [ ] `signals` 必須剛好包含五個面向：
+- [x] 建立 `data/phison/technical_fixture.json`。
+- [x] fixture 必須包含 `as_of_date`、`data_policy`、`price_data_policy`、`signals`、`missing_data`。
+- [x] `signals` 必須剛好包含五個面向：
   - `price_trend`
   - `volume_trend`
   - `moving_average_structure`
   - `momentum`
   - `volatility_risk`
-- [ ] 每個 signal 必須包含 `id`、`name`、`coverage_status`、`technical_bias`、`source_ids`、`lookback_window`、`metric_values`、`summary`、`missing_data`、`data_policy`。
-- [ ] `coverage_status` 必須是 `available`、`partial`、`missing`、`not_available`。
-- [ ] `technical_bias` 必須是 `bullish`、`bearish`、`neutral`、`mixed`、`unknown`、`not_available`。
-- [ ] 若 `coverage_status` 是 `missing`，`technical_bias` 必須是 `unknown`。
-- [ ] 若 `coverage_status` 是 `not_available`，`technical_bias` 必須是 `not_available`。
-- [ ] `source_ids` 必須引用已存在 source catalog ID；若沒有來源，使用空陣列並列出缺口。
-- [ ] `metric_values` 可包含 null，但 null 不得被 report 寫成已計算完成。
+- [x] 每個 signal 必須包含 `id`、`name`、`coverage_status`、`technical_bias`、`source_ids`、`lookback_window`、`metric_values`、`summary`、`missing_data`、`data_policy`。
+- [x] `coverage_status` 必須是 `available`、`partial`、`missing`、`not_available`。
+- [x] `technical_bias` 必須是 `bullish`、`bearish`、`neutral`、`mixed`、`unknown`、`not_available`。
+- [x] 若 `coverage_status` 是 `missing`，`technical_bias` 必須是 `unknown`。
+- [x] 若 `coverage_status` 是 `not_available`，`technical_bias` 必須是 `not_available`。
+- [x] `source_ids` 必須引用已存在 source catalog ID；若沒有來源，使用空陣列並列出缺口。
+- [x] `metric_values` 可包含 null，但 null 不得被 report 寫成已計算完成。
 
 驗收標準：
 
@@ -881,13 +881,13 @@
 
 ### 15.3 第一版資料覆蓋策略
 
-- [ ] `price_trend` 第一版標 `missing`，列出 20 / 60 / 120 日歷史收盤價序列缺口。
-- [ ] `volume_trend` 第一版標 `missing`，列出成交量序列、均量與量能變化缺口。
-- [ ] `moving_average_structure` 第一版標 `missing`，列出 MA20、MA60、MA120 與收盤價相對位置缺口。
-- [ ] `momentum` 第一版標 `missing`，列出 RSI、MACD、區間報酬率或其他動能 proxy 缺口。
-- [ ] `volatility_risk` 第一版標 `missing`，列出 ATR、區間波動、最大回撤或高低價序列缺口。
-- [ ] `overall_signal` 第一版必須是 `not_evaluable` 或 `unknown`，不得輸出技術面偏多 / 偏空。
-- [ ] 若後續手動補入 OHLCV snapshot，必須標示資料日期、來源、非即時行情與計算方式。
+- [x] `price_trend` 第一版標 `missing`，列出 20 / 60 / 120 日歷史收盤價序列缺口。
+- [x] `volume_trend` 第一版標 `missing`，列出成交量序列、均量與量能變化缺口。
+- [x] `moving_average_structure` 第一版標 `missing`，列出 MA20、MA60、MA120 與收盤價相對位置缺口。
+- [x] `momentum` 第一版標 `missing`，列出 RSI、MACD、區間報酬率或其他動能 proxy 缺口。
+- [x] `volatility_risk` 第一版標 `missing`，列出 ATR、區間波動、最大回撤或高低價序列缺口。
+- [x] `overall_signal` 第一版必須是 `not_evaluable` 或 `unknown`，不得輸出技術面偏多 / 偏空。
+- [x] 若後續手動補入 OHLCV snapshot，必須標示資料日期、來源、非即時行情與計算方式。
 
 驗收標準：
 
@@ -896,13 +896,13 @@
 
 ### 15.4 Store 與資料驗證
 
-- [ ] 在 file store 新增 technical fixture loader。
-- [ ] loader 必須驗證 top-level schema 與五個 signal IDs。
-- [ ] loader 或 agent 必須驗證 coverage status 合法。
-- [ ] loader 或 agent 必須驗證 technical bias 合法。
-- [ ] loader 或 agent 必須驗證 `source_ids` 存在於 source catalog。
-- [ ] loader 或 agent 必須驗證 `missing` / `not_available` 不得搭配 `bullish` 或 `bearish`。
-- [ ] loader 或 agent 必須驗證 `metric_values` 是 object，且缺值不會被視為 available metric。
+- [x] 在 file store 新增 technical fixture loader。
+- [x] loader 必須驗證 top-level schema 與五個 signal IDs。
+- [x] loader 或 agent 必須驗證 coverage status 合法。
+- [x] loader 或 agent 必須驗證 technical bias 合法。
+- [x] loader 或 agent 必須驗證 `source_ids` 存在於 source catalog。
+- [x] loader 或 agent 必須驗證 `missing` / `not_available` 不得搭配 `bullish` 或 `bearish`。
+- [x] loader 或 agent 必須驗證 `metric_values` 是 object，且缺值不會被視為 available metric。
 
 驗收標準：
 
@@ -911,12 +911,12 @@
 
 ### 15.5 Technical Agent Output
 
-- [ ] 新增 deterministic `TechnicalAgent`。
-- [ ] Agent input：`run_id`、technical fixture、source catalog。
-- [ ] Agent output 必須包含 `summary`、`signals`、`data_gaps`、`interpretation`。
-- [ ] `summary` 必須包含 `signals_total`、`available`、`partial`、`missing`、`not_available`、`overall_signal`、`data_policy`、`price_data_policy`、`major_gaps`。
-- [ ] `interpretation` 必須用保守語氣說明目前不能用技術面支持或反駁 AI SSD / valuation thesis。
-- [ ] Agent step 的 `output_summary` 必須同時提到五個技術面向、coverage counts 與 overall signal。
+- [x] 新增 deterministic `TechnicalAgent`。
+- [x] Agent input：`run_id`、technical fixture、source catalog。
+- [x] Agent output 必須包含 `summary`、`signals`、`data_gaps`、`interpretation`。
+- [x] `summary` 必須包含 `signals_total`、`available`、`partial`、`missing`、`not_available`、`overall_signal`、`data_policy`、`price_data_policy`、`major_gaps`。
+- [x] `interpretation` 必須用保守語氣說明目前不能用技術面支持或反駁 AI SSD / valuation thesis。
+- [x] Agent step 的 `output_summary` 必須同時提到五個技術面向、coverage counts 與 overall signal。
 
 驗收標準：
 
@@ -925,11 +925,11 @@
 
 ### 15.6 Orchestrator / API Contract
 
-- [ ] Orchestrator 讀取 technical fixture 並傳入 Technical Agent。
-- [ ] Technical Agent 建議放在 Chip Agent 之後、Health Check Agent 之前。
-- [ ] 完整 run response 新增 `analysis.technical`。
-- [ ] 不新增新的 API endpoint；沿用既有 run response。
-- [ ] 更新 `docs/api.md`，記錄 technical payload 與資料限制。
+- [x] Orchestrator 讀取 technical fixture 並傳入 Technical Agent。
+- [x] Technical Agent 建議放在 Chip Agent 之後、Health Check Agent 之前。
+- [x] 完整 run response 新增 `analysis.technical`。
+- [x] 不新增新的 API endpoint；沿用既有 run response。
+- [x] 更新 `docs/api.md`，記錄 technical payload 與資料限制。
 
 驗收標準：
 
@@ -938,10 +938,10 @@
 
 ### 15.7 Agent Integration
 
-- [ ] Health Check Agent 第一版不重新計算 technical metrics。
-- [ ] 若後續 Health Check 需要技術資料，只能消費 `analysis.technical`。
-- [ ] Risk Agent 可讀取 `analysis.technical` 的 gaps，補上技術面資料限制風險。
-- [ ] Synthesis Agent 後續可使用 `analysis.technical` 比較基本面、估值、籌碼與技術面是否矛盾。
+- [x] Health Check Agent 第一版不重新計算 technical metrics。
+- [x] 若後續 Health Check 需要技術資料，只能消費 `analysis.technical`。
+- [x] Risk Agent 可讀取 `analysis.technical` 的 gaps，補上技術面資料限制風險。
+- [x] Synthesis Agent 後續可使用 `analysis.technical` 比較基本面、估值、籌碼與技術面是否矛盾。
 
 驗收標準：
 
@@ -950,11 +950,11 @@
 
 ### 15.8 Report Generator
 
-- [ ] 報告新增「技術面摘要」段落。
-- [ ] 段落必須列出五個 signals、coverage status、technical bias、summary、metric values、missing data 與 source IDs。
-- [ ] 報告必須標示 technical 第一版來自本機 public fixture，不是即時行情、盤中資料、券商看盤軟體、技術指標 API 或回測結果。
-- [ ] 報告不得把 `missing` 或 `not_available` 寫成突破、量價齊揚、多頭排列、黃金交叉、站上均線或動能轉強。
-- [ ] 報告不得把技術面寫成買賣、停損、停利或短線進出建議。
+- [x] 報告新增「技術面摘要」段落。
+- [x] 段落必須列出五個 signals、coverage status、technical bias、summary、metric values、missing data 與 source IDs。
+- [x] 報告必須標示 technical 第一版來自本機 public fixture，不是即時行情、盤中資料、券商看盤軟體、技術指標 API 或回測結果。
+- [x] 報告不得把 `missing` 或 `not_available` 寫成突破、量價齊揚、多頭排列、黃金交叉、站上均線或動能轉強。
+- [x] 報告不得把技術面寫成買賣、停損、停利或短線進出建議。
 
 驗收標準：
 
@@ -963,12 +963,12 @@
 
 ### 15.9 評估代理（Evaluation Agent）
 
-- [ ] rubric 新增或擴充 technical overclaim guardrail。
-- [ ] 若 report 缺少「技術面摘要」，evaluation 應降分或標 `needs_revision`。
-- [ ] 若五個技術面向沒有全部出現，evaluation 應降分。
-- [ ] 若 report 在沒有來源時宣稱突破、量價齊揚、多頭排列、黃金交叉、站上均線、動能轉強、波動收斂或短線買點，evaluation 應 hard fail。
-- [ ] 若 report 宣稱使用即時行情、盤中資料、券商看盤軟體、技術指標 API 或回測結果，但 fixture 沒有該資料，evaluation 應 hard fail。
-- [ ] 若 report 清楚列出技術資料缺口，evaluation 應提高 risk coverage / user usefulness。
+- [x] rubric 新增或擴充 technical overclaim guardrail。
+- [x] 若 report 缺少「技術面摘要」，evaluation 應降分或標 `needs_revision`。
+- [x] 若五個技術面向沒有全部出現，evaluation 應降分。
+- [x] 若 report 在沒有來源時宣稱突破、量價齊揚、多頭排列、黃金交叉、站上均線、動能轉強、波動收斂或短線買點，evaluation 應 hard fail。
+- [x] 若 report 宣稱使用即時行情、盤中資料、券商看盤軟體、技術指標 API 或回測結果，但 fixture 沒有該資料，evaluation 應 hard fail。
+- [x] 若 report 清楚列出技術資料缺口，evaluation 應提高 risk coverage / user usefulness。
 
 驗收標準：
 
@@ -977,10 +977,10 @@
 
 ### 15.10 前端
 
-- [ ] detail panel 新增 `Technical` tab，或在既有 detail panel 中新增 technical view。
-- [ ] Technical view 顯示 overall signal、五個 signals、coverage status、technical bias、metric values、source IDs、missing data。
-- [ ] `available`、`partial`、`missing`、`not_available` 的樣式必須可區分。
-- [ ] `unknown` / `not_available` technical bias 不得被視覺設計成正向訊號。
+- [x] detail panel 新增 `Technical` tab，或在既有 detail panel 中新增 technical view。
+- [x] Technical view 顯示 overall signal、五個 signals、coverage status、technical bias、metric values、source IDs、missing data。
+- [x] `available`、`partial`、`missing`、`not_available` 的樣式必須可區分。
+- [x] `unknown` / `not_available` technical bias 不得被視覺設計成正向訊號。
 - [ ] desktop 與 mobile viewport 下，metric values、missing data、source IDs、summary 不得溢出。
 
 驗收標準：
@@ -990,17 +990,17 @@
 
 ### 15.11 TDD 與驗證
 
-- [ ] 先寫 RED tests，再實作 production code。
-- [ ] 後端測試：file store 能讀取 technical fixture。
-- [ ] 後端測試：fixture schema、signal IDs、source IDs、coverage status、technical bias 合法。
-- [ ] 後端測試：`missing` / `not_available` 不得搭配 bullish / bearish technical bias。
-- [ ] 後端測試：default run 包含 `technical_agent` step。
-- [ ] 後端測試：default run 包含 `analysis.technical.summary`、`signals`、`data_gaps`、`interpretation`。
-- [ ] 後端測試：Technical Agent 不會輸出買賣建議、突破或多頭排列等 overclaim。
-- [ ] 後端測試：report 包含「技術面摘要」。
-- [ ] 後端測試：evaluation 能抓出 technical overclaim。
-- [ ] Flask API 測試：default run endpoint 回傳 `analysis.technical`。
-- [ ] 前端驗證：`npm run build` 成功。
+- [x] 先寫 RED tests，再實作 production code。
+- [x] 後端測試：file store 能讀取 technical fixture。
+- [x] 後端測試：fixture schema、signal IDs、source IDs、coverage status、technical bias 合法。
+- [x] 後端測試：`missing` / `not_available` 不得搭配 bullish / bearish technical bias。
+- [x] 後端測試：default run 包含 `technical_agent` step。
+- [x] 後端測試：default run 包含 `analysis.technical.summary`、`signals`、`data_gaps`、`interpretation`。
+- [x] 後端測試：Technical Agent 不會輸出買賣建議、突破或多頭排列等 overclaim。
+- [x] 後端測試：report 包含「技術面摘要」。
+- [x] 後端測試：evaluation 能抓出 technical overclaim。
+- [x] Flask API 測試：default run endpoint 回傳 `analysis.technical`。
+- [x] 前端驗證：`npm run build` 成功。
 - [ ] 瀏覽器驗證：desktop / mobile Technical tab 可讀、可操作、不溢出。
 
 驗收標準：

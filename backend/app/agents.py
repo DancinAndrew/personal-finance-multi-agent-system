@@ -366,6 +366,62 @@ class ChipAgent:
         )
 
 
+class TechnicalAgent:
+    """Build a conservative technical-data coverage snapshot."""
+
+    def run(
+        self,
+        run_id: str,
+        technical_fixture: dict[str, Any],
+        source_catalog: list[dict[str, Any]],
+    ) -> AgentResult:
+        catalog_ids = {source["id"] for source in source_catalog}
+        source_ids = _unique_source_ids(_source_ids_from_technical_fixture(technical_fixture))
+        invalid_source_ids = set(source_ids).difference(catalog_ids)
+        if invalid_source_ids:
+            raise ValueError(f"Unknown technical source ids: {sorted(invalid_source_ids)}")
+
+        def work() -> tuple[str, dict[str, Any]]:
+            signals = technical_fixture["signals"]
+            coverage = _build_technical_coverage(signals)
+            data_gaps = _technical_data_gaps(technical_fixture)
+            summary = {
+                "data_policy": technical_fixture["data_policy"],
+                "price_data_policy": technical_fixture["price_data_policy"],
+                "as_of_date": technical_fixture["as_of_date"],
+                "signals_total": len(signals),
+                "coverage": coverage,
+                "available": coverage["available"],
+                "partial": coverage["partial"],
+                "missing": coverage["missing"],
+                "not_available": coverage["not_available"],
+                "overall_signal": "not_evaluable",
+                "major_gaps": data_gaps[:6],
+            }
+            interpretation = _build_technical_interpretation(summary, data_gaps)
+            return (
+                "建立 5 項技術面資料覆蓋檢查，"
+                f"{coverage['available']} available、{coverage['partial']} partial、"
+                f"{coverage['missing']} missing、{coverage['not_available']} not_available；"
+                "overall_signal=not_evaluable，目前不能形成技術面偏多或偏空訊號。",
+                {
+                    "summary": summary,
+                    "signals": signals,
+                    "data_gaps": data_gaps,
+                    "interpretation": interpretation,
+                },
+            )
+
+        return timed_step(
+            agent="technical_agent",
+            run_id=run_id,
+            input_summary="使用本機 public fixture 檢查價格趨勢、量能、均線結構、動能與波動風險資料覆蓋。",
+            source_ids=source_ids,
+            confidence=0.74,
+            work=work,
+        )
+
+
 class HealthCheckAgent:
     """Summarize conservative StatementDog-style health checks."""
 
@@ -376,12 +432,14 @@ class HealthCheckAgent:
         fundamentals: dict[str, Any] | None = None,
         valuation: dict[str, Any] | None = None,
         chip: dict[str, Any] | None = None,
+        technical: dict[str, Any] | None = None,
     ) -> AgentResult:
         source_ids = sorted({source_id for check in checks for source_id in check["source_ids"]})
 
         def work() -> tuple[str, dict[str, Any]]:
             fundamental_alignment = _build_health_fundamental_alignment(fundamentals, valuation)
             chip_alignment = _build_health_chip_alignment(chip)
+            technical_alignment = _build_health_technical_alignment(technical)
             summary = {
                 "total": len(checks),
                 "pass": _count_status(checks, "pass"),
@@ -392,6 +450,7 @@ class HealthCheckAgent:
                 "major_gaps": _major_health_gaps(checks),
                 "fundamental_alignment": fundamental_alignment,
                 "chip_alignment": chip_alignment,
+                "technical_alignment": technical_alignment,
             }
             return (
                 "完成 7 種股票健診框架，"
@@ -404,7 +463,7 @@ class HealthCheckAgent:
         return timed_step(
             agent="health_check_agent",
             run_id=run_id,
-            input_summary="使用 public fixture 將財報狗式七種股票健診轉成保守狀態與資料缺口；可讀取 fundamentals、valuation 與 chip payload 但不重新計算 metrics。",
+            input_summary="使用 public fixture 將財報狗式七種股票健診轉成保守狀態與資料缺口；可讀取 fundamentals、valuation、chip 與 technical payload 但不重新計算 metrics。",
             source_ids=source_ids,
             confidence=0.78,
             work=work,
@@ -414,7 +473,12 @@ class HealthCheckAgent:
 class RiskAgent:
     """Generate risks and opposing views."""
 
-    def run(self, run_id: str, chip: dict[str, Any] | None = None) -> AgentResult:
+    def run(
+        self,
+        run_id: str,
+        chip: dict[str, Any] | None = None,
+        technical: dict[str, Any] | None = None,
+    ) -> AgentResult:
         def work() -> tuple[str, dict[str, Any]]:
             risks = [
                 "NAND 報價反轉或漲幅放緩，會壓縮毛利率與庫存利益。",
@@ -425,8 +489,10 @@ class RiskAgent:
             ]
             if chip and chip["summary"]["overall_signal"] == "not_evaluable":
                 risks.append("籌碼資料目前只能呈現缺口，不能用來支持或反駁 AI SSD thesis。")
+            if technical and technical["summary"]["overall_signal"] == "not_evaluable":
+                risks.append("技術面資料目前只能呈現缺口，不能用來支持或反駁 AI SSD thesis。")
             return (
-                "列出 NAND 循環、Q1 年化、來源層級與現金流等主要反方風險。",
+                "列出 NAND 循環、Q1 年化、來源層級、現金流與資料缺口等主要反方風險。",
                 {"risks": risks},
             )
 
@@ -452,6 +518,7 @@ class ReportGenerator:
         fundamentals: dict[str, Any],
         valuation: dict[str, Any],
         chip: dict[str, Any],
+        technical: dict[str, Any],
         health_checks: dict[str, Any],
         risks: dict[str, Any],
         price_note: str,
@@ -464,6 +531,7 @@ class ReportGenerator:
                 fundamentals=fundamentals,
                 valuation=valuation,
                 chip=chip,
+                technical=technical,
                 health_checks=health_checks,
                 risks=risks["risks"],
                 price_note=price_note,
@@ -494,9 +562,14 @@ class ReportGenerator:
                     "source_ids": [],
                     "evidence_page": "local_chip_fixture",
                 },
+                {
+                    "claim": "目前技術面只能呈現資料缺口，不能支持或反駁 AI SSD / valuation thesis。",
+                    "source_ids": [],
+                    "evidence_page": "local_technical_fixture",
+                },
             ]
             return (
-                "產生一份偏中性偏多、含估值拆解、股票健診摘要、來源與風險邊界的研究輔助報告。",
+                "產生一份偏中性偏多、含估值拆解、籌碼與技術資料缺口、股票健診摘要、來源與風險邊界的研究輔助報告。",
                 {"report_markdown": report, "claims": claims},
             )
 
@@ -523,6 +596,7 @@ class EvaluationAgent:
         fundamentals: dict[str, Any] | None = None,
         valuation: dict[str, Any] | None = None,
         chip: dict[str, Any] | None = None,
+        technical: dict[str, Any] | None = None,
     ) -> AgentResult:
         def work() -> tuple[str, dict[str, Any]]:
             hard_fail_hits = [
@@ -536,6 +610,8 @@ class EvaluationAgent:
                 hard_fail_hits.append("valuation_overclaim")
             if _chip_overclaim_is_hit(report_markdown):
                 hard_fail_hits.append("chip_overclaim")
+            if _technical_overclaim_is_hit(report_markdown):
+                hard_fail_hits.append("technical_overclaim")
             health_summary_missing = not _has_health_check_summary(report_markdown, health_checks)
             fundamental_breakdown_missing = not _has_fundamental_breakdown(
                 report_markdown,
@@ -549,6 +625,10 @@ class EvaluationAgent:
                 report_markdown,
                 chip,
             )
+            technical_summary_missing = technical is not None and not _has_technical_summary(
+                report_markdown,
+                technical,
+            )
             dimensions = [
                 {"id": "source_grounding", "name": "來源 grounding", "score": 4.5},
                 {"id": "valuation_rigor", "name": "財務與估值嚴謹度", "score": 4.4},
@@ -557,6 +637,7 @@ class EvaluationAgent:
                 {"id": "risk_coverage", "name": "風險與反方觀點", "score": 4.4},
                 {"id": "health_check_honesty", "name": "健診與資料缺口誠實度", "score": 4.3},
                 {"id": "chip_data_honesty", "name": "籌碼資料缺口誠實度", "score": 4.2},
+                {"id": "technical_data_honesty", "name": "技術資料缺口誠實度", "score": 4.2},
                 {"id": "user_usefulness", "name": "使用者可用性", "score": 4.5},
             ]
             total = round(sum(item["score"] for item in dimensions) / len(dimensions), 2)
@@ -565,6 +646,7 @@ class EvaluationAgent:
                 or fundamental_breakdown_missing
                 or valuation_breakdown_missing
                 or chip_summary_missing
+                or technical_summary_missing
             ):
                 total = min(total, 3.5)
             if hard_fail_hits:
@@ -577,7 +659,8 @@ class EvaluationAgent:
                 "基本面拆解採五大面向 coverage，營收 / EPS 是 partial evidence，安全性與現金流仍缺資料。",
                 "估值拆解採 public fixture，目標價與 Forward P/E 只作敏感度，仍缺 P/B、殖利率、歷史估值與同業估值。",
                 "籌碼面採 public fixture 覆蓋檢查，缺資料時維持 not_evaluable。",
-                "仍需後續補正式 Q1 財報、現金流、股利、籌碼、P/B、殖利率與長期估值區間。",
+                "技術面採 public fixture 覆蓋檢查，缺資料時維持 not_evaluable。",
+                "仍需後續補正式 Q1 財報、現金流、股利、籌碼、技術面、P/B、殖利率與長期估值區間。",
             ]
             if health_summary_missing:
                 notes.append("報告缺少完整股票健診摘要或未呈現七種健診，需補強。")
@@ -587,6 +670,8 @@ class EvaluationAgent:
                 notes.append("報告缺少估值拆解，需補示範股價日期、Forward P/E 情境、券商目標價區間與估值缺口。")
             if chip_summary_missing:
                 notes.append("報告缺少完整籌碼面摘要，需補五個籌碼面向、coverage、signal bias 與資料缺口。")
+            if technical_summary_missing:
+                notes.append("報告缺少完整技術面摘要，需補五個技術面向、coverage、technical bias 與資料缺口。")
             payload = {
                 "total_score": total,
                 "threshold": rubric["threshold"],
@@ -615,6 +700,7 @@ def _build_report(
     fundamentals: dict[str, Any],
     valuation: dict[str, Any],
     chip: dict[str, Any],
+    technical: dict[str, Any],
     health_checks: dict[str, Any],
     risks: list[str],
     price_note: str,
@@ -634,6 +720,11 @@ def _build_report(
     chip_rows = _build_chip_signal_rows(chip["signals"])
     chip_gaps = "、".join(chip["summary"]["major_gaps"])
     chip_interpretation_rows = "\n".join(f"- {item}" for item in chip["interpretation"])
+    technical_rows = _build_technical_signal_rows(technical["signals"])
+    technical_gaps = "、".join(technical["summary"]["major_gaps"])
+    technical_interpretation_rows = "\n".join(
+        f"- {item}" for item in technical["interpretation"]
+    )
     thesis_rows = "\n".join(f"- {item}" for item in thesis)
     fundamental_rows = _build_fundamental_rows(fundamentals["categories"])
     fundamental_gaps = "、".join(fundamentals["summary"]["major_gaps"])
@@ -704,6 +795,18 @@ def _build_report(
 
 {chip_interpretation_rows}
 
+## 技術面摘要
+
+本段是 public fixture / public_fixture_only 的資料覆蓋檢查，不是即時行情、盤中技術指標、券商看盤軟體或交易策略回測結果。`not_evaluable` 代表目前不能判斷技術面偏向。
+
+| 面向 | Coverage | Technical bias | 保守摘要 | Metric values | 主要缺口 | Sources |
+|---|---|---|---|---|---|---|
+{technical_rows}
+
+整體技術訊號：{technical['summary']['overall_signal']}。主要缺口：{technical_gaps}。
+
+{technical_interpretation_rows}
+
 ## 股票健診摘要
 
 本段是 public fixture / public_fixture_only 的保守框架化輸出，不是財報狗登入或付費資料結果。`unknown` 代表資料不足，`not_available` 代表目前 MVP 沒有資料入口或權限。
@@ -766,6 +869,14 @@ def _source_ids_from_valuation_fixture(snapshot: dict[str, Any]) -> list[str]:
 
 
 def _source_ids_from_chip_fixture(snapshot: dict[str, Any]) -> list[str]:
+    return [
+        source_id
+        for signal in snapshot["signals"]
+        for source_id in signal["source_ids"]
+    ]
+
+
+def _source_ids_from_technical_fixture(snapshot: dict[str, Any]) -> list[str]:
     return [
         source_id
         for signal in snapshot["signals"]
@@ -871,6 +982,20 @@ def _build_health_chip_alignment(chip: dict[str, Any] | None) -> dict[str, str]:
         "chip_signal": (
             f"Chip Agent overall_signal is {summary['overall_signal']}；"
             "籌碼健診維持 not_available，不重新計算 chip metrics；"
+            f"主要缺口為{gaps}。"
+        )
+    }
+
+
+def _build_health_technical_alignment(technical: dict[str, Any] | None) -> dict[str, str]:
+    if not technical:
+        return {}
+    summary = technical["summary"]
+    gaps = "、".join(summary["major_gaps"][:4])
+    return {
+        "technical_signal": (
+            f"Technical Agent overall_signal is {summary['overall_signal']}；"
+            "健診不重新計算 technical metrics；"
             f"主要缺口為{gaps}。"
         )
     }
@@ -1034,9 +1159,26 @@ def _build_chip_coverage(signals: list[dict[str, Any]]) -> dict[str, int]:
     return coverage
 
 
+def _build_technical_coverage(signals: list[dict[str, Any]]) -> dict[str, int]:
+    statuses = ["available", "partial", "missing", "not_available"]
+    coverage = {status: 0 for status in statuses}
+    for signal in signals:
+        coverage[signal["coverage_status"]] += 1
+    return coverage
+
+
 def _chip_data_gaps(chip_fixture: dict[str, Any]) -> list[str]:
     gaps = list(chip_fixture["missing_data"])
     for signal in chip_fixture["signals"]:
+        for missing in signal["missing_data"]:
+            if missing not in gaps:
+                gaps.append(missing)
+    return gaps
+
+
+def _technical_data_gaps(technical_fixture: dict[str, Any]) -> list[str]:
+    gaps = list(technical_fixture["missing_data"])
+    for signal in technical_fixture["signals"]:
         for missing in signal["missing_data"]:
             if missing not in gaps:
                 gaps.append(missing)
@@ -1057,6 +1199,24 @@ def _build_chip_interpretation(
         (
             f"第一版覆蓋狀態為 {summary['coverage']['missing']} missing、"
             f"{summary['coverage']['not_available']} not_available；不得解讀成籌碼偏多或偏空。"
+        ),
+    ]
+
+
+def _build_technical_interpretation(
+    summary: dict[str, Any],
+    data_gaps: list[str],
+) -> list[str]:
+    return [
+        "目前不能用技術面支持或反駁 AI SSD / valuation thesis，因為 overall_signal 是 not_evaluable。",
+        (
+            "價格趨勢、量能、均線、動能與波動風險都需要可追溯的歷史 OHLCV"
+            " 或衍生指標序列；目前尚未整理進 fixture。"
+        ),
+        f"後續最優先補齊：{'、'.join(data_gaps[:5])}。",
+        (
+            f"第一版覆蓋狀態為 {summary['coverage']['missing']} missing、"
+            f"{summary['coverage']['not_available']} not_available；不得解讀成技術面偏多或偏空。"
         ),
     ]
 
@@ -1145,6 +1305,27 @@ def _build_chip_signal_rows(signals: list[dict[str, Any]]) -> str:
     return "\n".join(rows)
 
 
+def _build_technical_signal_rows(signals: list[dict[str, Any]]) -> str:
+    rows = []
+    for signal in signals:
+        sources = ", ".join(signal["source_ids"]) if signal["source_ids"] else "無直接來源"
+        missing = "、".join(signal["missing_data"][:3])
+        metrics = _format_technical_metric_values(signal["metric_values"])
+        rows.append(
+            f"| {signal['name']} | {signal['coverage_status']} | "
+            f"{signal['technical_bias']} | {signal['summary']} | {metrics} | {missing} | {sources} |"
+        )
+    return "\n".join(rows)
+
+
+def _format_technical_metric_values(metric_values: dict[str, Any]) -> str:
+    items = []
+    for key, value in metric_values.items():
+        display_value = "缺資料" if value is None else str(value)
+        items.append(f"{key}={display_value}")
+    return "；".join(items)
+
+
 def _has_health_check_summary(
     report_markdown: str,
     health_checks: dict[str, Any] | None,
@@ -1211,6 +1392,25 @@ def _has_chip_summary(
     )
 
 
+def _has_technical_summary(
+    report_markdown: str,
+    technical: dict[str, Any] | None,
+) -> bool:
+    if not technical:
+        return False
+    if "技術面摘要" not in report_markdown:
+        return False
+    signals = technical.get("signals", [])
+    if len(signals) != 5:
+        return False
+    return all(
+        signal["name"] in report_markdown
+        and signal["coverage_status"] in report_markdown
+        and signal["technical_bias"] in report_markdown
+        for signal in signals
+    )
+
+
 def _health_check_hallucination_is_hit(report_markdown: str) -> bool:
     risky_phrases = [
         "已使用財報狗付費資料",
@@ -1238,6 +1438,31 @@ def _chip_overclaim_is_hit(report_markdown: str) -> bool:
         "已使用財報狗登入籌碼",
         "已使用券商分點資料",
         "已使用即時籌碼 API",
+    ]
+    return any(phrase in report_markdown for phrase in risky_phrases)
+
+
+def _technical_overclaim_is_hit(report_markdown: str) -> bool:
+    risky_phrases = [
+        "股價突破",
+        "突破",
+        "量價齊揚",
+        "多頭排列",
+        "黃金交叉",
+        "站上均線",
+        "跌破支撐",
+        "買盤放量",
+        "動能轉強",
+        "波動收斂",
+        "短線買點",
+        "短線進場",
+        "停損",
+        "停利",
+        "已使用即時行情",
+        "已使用盤中資料",
+        "已使用技術指標 API",
+        "已使用券商看盤軟體",
+        "已完成回測",
     ]
     return any(phrase in report_markdown for phrase in risky_phrases)
 
@@ -1291,4 +1516,6 @@ def _rule_is_hit(rule: str, report_markdown: str) -> bool:
         return _chip_overclaim_is_hit(report_markdown)
     if "paid" in rule or "login-gated" in rule or "broker-branch" in rule:
         return _chip_overclaim_is_hit(report_markdown)
+    if "突破" in rule or "量價齊揚" in rule or "technical" in rule:
+        return _technical_overclaim_is_hit(report_markdown)
     return False

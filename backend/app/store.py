@@ -26,6 +26,15 @@ class FileStore:
         "unknown",
         "not_available",
     }
+    TECHNICAL_COVERAGE_STATUSES = {"available", "partial", "missing", "not_available"}
+    TECHNICAL_BIASES = {
+        "bullish",
+        "bearish",
+        "neutral",
+        "mixed",
+        "unknown",
+        "not_available",
+    }
     FUNDAMENTAL_CATEGORY_IDS = {
         "revenue",
         "profitability",
@@ -39,6 +48,13 @@ class FileStore:
         "director_holdings",
         "director_pledges",
         "shareholder_count",
+    }
+    TECHNICAL_SIGNAL_IDS = {
+        "price_trend",
+        "volume_trend",
+        "moving_average_structure",
+        "momentum",
+        "volatility_risk",
     }
 
     def __init__(self, repo_root: Path) -> None:
@@ -262,6 +278,82 @@ class FileStore:
                 raise ValueError(f"Unavailable chip signal needs missing_data: {signal_id}")
         return data
 
+    def load_technical_fixture(self) -> dict[str, Any]:
+        data = self._load_json("data/phison/technical_fixture.json")
+        if not isinstance(data, dict):
+            raise ValueError("technical_fixture.json must contain an object")
+
+        required_top_level = {
+            "as_of_date",
+            "data_policy",
+            "price_data_policy",
+            "signals",
+            "missing_data",
+        }
+        missing_top_level = required_top_level.difference(data)
+        if missing_top_level:
+            raise ValueError(f"Technical fixture missing fields: {sorted(missing_top_level)}")
+        if data["data_policy"] != "public_fixture_only":
+            raise ValueError("Technical fixture must use public_fixture_only")
+        if data["price_data_policy"] != "manual_public_snapshot_only":
+            raise ValueError("Technical fixture must use manual_public_snapshot_only")
+        if not isinstance(data["missing_data"], list):
+            raise ValueError("Technical fixture missing_data must be a list")
+        signals = data["signals"]
+        if not isinstance(signals, list):
+            raise ValueError("Technical fixture signals must be a list")
+        if len(signals) != len(self.TECHNICAL_SIGNAL_IDS):
+            raise ValueError(
+                f"Technical fixture must contain exactly {len(self.TECHNICAL_SIGNAL_IDS)} signals"
+            )
+        signal_ids = {signal.get("id") for signal in signals}
+        if signal_ids != self.TECHNICAL_SIGNAL_IDS:
+            raise ValueError(
+                f"Technical fixture signals must be exactly {sorted(self.TECHNICAL_SIGNAL_IDS)}"
+            )
+
+        source_ids = {source["id"] for source in self.load_source_catalog()}
+        signal_required = {
+            "id",
+            "name",
+            "coverage_status",
+            "technical_bias",
+            "source_ids",
+            "lookback_window",
+            "metric_values",
+            "summary",
+            "missing_data",
+            "data_policy",
+        }
+        for signal in signals:
+            signal_id = signal.get("id", "<missing>")
+            missing = signal_required.difference(signal)
+            if missing:
+                raise ValueError(f"Technical signal {signal_id} missing fields: {sorted(missing)}")
+            self._validate_technical_coverage_status(signal["coverage_status"])
+            self._validate_technical_bias(signal["technical_bias"])
+            if not isinstance(signal["source_ids"], list):
+                raise ValueError(f"Technical signal {signal_id} source_ids must be a list")
+            if not isinstance(signal["metric_values"], dict):
+                raise ValueError(f"Technical signal {signal_id} metric_values must be an object")
+            if not isinstance(signal["missing_data"], list):
+                raise ValueError(f"Technical signal {signal_id} missing_data must be a list")
+            self._validate_source_ids(signal["source_ids"], source_ids, signal_id)
+            if signal["coverage_status"] == "missing" and signal["technical_bias"] != "unknown":
+                raise ValueError(f"Missing technical signal must have unknown bias: {signal_id}")
+            if (
+                signal["coverage_status"] == "not_available"
+                and signal["technical_bias"] != "not_available"
+            ):
+                raise ValueError(
+                    f"Not-available technical signal must have not_available bias: {signal_id}"
+                )
+            if signal["coverage_status"] in {"missing", "not_available"} and not signal[
+                "missing_data"
+            ]:
+                raise ValueError(f"Unavailable technical signal needs missing_data: {signal_id}")
+        return data
+
     def load_provenance(self) -> list[dict[str, Any]]:
         data = self._load_json("knowledge/phison/provenance.json")
         if not isinstance(data, list):
@@ -333,6 +425,14 @@ class FileStore:
     def _validate_chip_signal_bias(self, bias: Any) -> None:
         if bias not in self.CHIP_SIGNAL_BIASES:
             raise ValueError(f"Invalid chip signal bias: {bias}")
+
+    def _validate_technical_coverage_status(self, status: Any) -> None:
+        if status not in self.TECHNICAL_COVERAGE_STATUSES:
+            raise ValueError(f"Invalid technical coverage status: {status}")
+
+    def _validate_technical_bias(self, bias: Any) -> None:
+        if bias not in self.TECHNICAL_BIASES:
+            raise ValueError(f"Invalid technical bias: {bias}")
 
     def _validate_source_ids(
         self,

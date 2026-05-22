@@ -47,6 +47,12 @@ shareholders, director holdings, director pledges, and shareholder count can be
 evaluated. It is not StatementDog login-gated or paid data, broker-branch data,
 or a live chip API result.
 
+`analysis.technical` separates technical-data coverage from investment advice.
+It uses only the local public fixture and reports whether price trend, volume
+trend, moving-average structure, momentum, and volatility risk can be evaluated.
+It is not live market data, intraday data, broker terminal output, a technical
+indicator API result, or a backtest.
+
 ## POST /api/research-runs
 
 用途：建立 deterministic research run。
@@ -240,6 +246,51 @@ Signal bias enum:
 - `not_available`：coverage 是 `not_available` 時使用。
 
 第一版 `overall_signal` 固定為 `not_evaluable`；report / UI 不得把缺資料寫成分點買超、主力進場、大股東增加、籌碼轉強或買賣建議。
+
+## Technical Payload
+
+Technical Agent 會在完整 run response 的 `analysis.technical` 回傳技術面資料覆蓋檢查：
+
+```json
+{
+  "summary": {
+    "data_policy": "public_fixture_only",
+    "price_data_policy": "manual_public_snapshot_only",
+    "as_of_date": "2026-05-10",
+    "signals_total": 5,
+    "coverage": {
+      "available": 0,
+      "partial": 0,
+      "missing": 5,
+      "not_available": 0
+    },
+    "available": 0,
+    "partial": 0,
+    "missing": 5,
+    "not_available": 0,
+    "overall_signal": "not_evaluable",
+    "major_gaps": ["歷史收盤價", "成交量序列", "均線", "動能指標", "波動指標"]
+  },
+  "signals": [],
+  "data_gaps": [],
+  "interpretation": []
+}
+```
+
+Coverage status enum:
+
+- `available`：fixture 有足夠來源與期間，可計算該技術指標。
+- `partial`：只有部分期間或部分來源，不能形成完整技術判斷。
+- `missing`：理論上可由公開歷史行情人工補齊，但目前 fixture 尚未納入。
+- `not_available`：需要即時行情、盤中資料、登入、付費或外部資料源。
+
+Technical bias enum:
+
+- `bullish`、`bearish`、`neutral`、`mixed`：只有來源、期間與計算方式足夠時才能使用。
+- `unknown`：coverage 是 `missing` 時使用。
+- `not_available`：coverage 是 `not_available` 時使用。
+
+第一版 `overall_signal` 固定為 `not_evaluable`；report / UI 不得把缺資料寫成短線訊號、交易指令、即時行情、盤中技術指標、券商看盤軟體或回測結果。
 
 ## Error Handling
 

@@ -1,0 +1,97 @@
+{
+  "as_of_date": "2026-05-10",
+  "data_policy": "public_fixture_only",
+  "price_data_policy": "manual_public_snapshot_only",
+  "signals": [
+    {
+      "id": "price_trend",
+      "name": "價格趨勢",
+      "coverage_status": "missing",
+      "technical_bias": "unknown",
+      "source_ids": [],
+      "lookback_window": "20_to_120_trading_days_missing",
+      "metric_values": {
+        "latest_close": null,
+        "return_20d_pct": null,
+        "return_60d_pct": null,
+        "return_120d_pct": null
+      },
+      "summary": "第一版尚未納入可追溯的歷史收盤價序列，不能判斷價格趨勢。",
+      "missing_data": ["20 日收盤價序列", "60 日收盤價序列", "120 日收盤價序列"],
+      "data_policy": "public_source_not_curated"
+    },
+    {
+      "id": "volume_trend",
+      "name": "量能趨勢",
+      "coverage_status": "missing",
+      "technical_bias": "unknown",
+      "source_ids": [],
+      "lookback_window": "20_to_120_trading_days_missing",
+      "metric_values": {
+        "latest_volume": null,
+        "average_volume_20d": null,
+        "volume_change_20d_pct": null
+      },
+      "summary": "第一版尚未納入成交量序列與均量資料，不能判斷量能趨勢。",
+      "missing_data": ["成交量序列", "20 日均量", "60 日均量", "量能變化率"],
+      "data_policy": "public_source_not_curated"
+    },
+    {
+      "id": "moving_average_structure",
+      "name": "均線結構",
+      "coverage_status": "missing",
+      "technical_bias": "unknown",
+      "source_ids": [],
+      "lookback_window": "20_to_120_trading_days_missing",
+      "metric_values": {
+        "ma20": null,
+        "ma60": null,
+        "ma120": null,
+        "close_vs_ma20_pct": null
+      },
+      "summary": "第一版尚未納入 MA20、MA60、MA120 與收盤價相對位置，不能判斷均線結構。",
+      "missing_data": ["MA20", "MA60", "MA120", "收盤價相對均線位置"],
+      "data_policy": "public_source_not_curated"
+    },
+    {
+      "id": "momentum",
+      "name": "動能",
+      "coverage_status": "missing",
+      "technical_bias": "unknown",
+      "source_ids": [],
+      "lookback_window": "20_to_120_trading_days_missing",
+      "metric_values": {
+        "rsi_14": null,
+        "macd": null,
+        "return_20d_pct": null,
+        "return_60d_pct": null
+      },
+      "summary": "第一版尚未納入 RSI、MACD 或區間報酬率序列，不能判斷動能。",
+      "missing_data": ["RSI", "MACD", "20 日報酬率", "60 日報酬率"],
+      "data_policy": "public_source_not_curated"
+    },
+    {
+      "id": "volatility_risk",
+      "name": "波動風險",
+      "coverage_status": "missing",
+      "technical_bias": "unknown",
+      "source_ids": [],
+      "lookback_window": "20_to_120_trading_days_missing",
+      "metric_values": {
+        "atr_14": null,
+        "max_drawdown_60d_pct": null,
+        "high_low_range_60d_pct": null
+      },
+      "summary": "第一版尚未納入高低價序列、ATR 或區間回撤資料，不能判斷波動風險。",
+      "missing_data": ["高低價序列", "ATR", "60 日最大回撤", "區間波動"],
+      "data_policy": "public_source_not_curated"
+    }
+  ],
+  "missing_data": [
+    "歷史收盤價",
+    "成交量序列",
+    "均線",
+    "動能指標",
+    "波動指標"
+  ]
+}
