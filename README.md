@@ -79,8 +79,12 @@ PYTHONPYCACHEPREFIX=.pycache python3 -m compileall backend
 openspec validate personal-finance-multi-agent-system --strict --no-interactive
 cd frontend
 npm run build
+npx playwright install chromium
+npm run verify:technical-tab
 npm audit --audit-level=moderate
 ```
+
+`npm run verify:technical-tab` 會自動啟動本機 Flask API 與 Vue dev server，使用 Playwright 在 desktop / mobile viewport 打開 `Technical` tab，檢查五個技術面向、`not_evaluable` 狀態、資料政策與水平溢出。截圖輸出在 `frontend/test-results/technical-tab/`，該資料夾不進 git。
 
 ## Demo Path
 

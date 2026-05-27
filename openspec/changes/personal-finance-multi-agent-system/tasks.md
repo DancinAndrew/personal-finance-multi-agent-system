@@ -841,7 +841,7 @@
 
 ## 15. Technical Agent 實作
 
-> 本節已完成 deterministic Technical Agent 最小切片；瀏覽器視覺驗證因本機 Playwright browser binary 尚未可用而保留為未完成。
+> 本節已完成 deterministic Technical Agent 最小切片；已新增可重跑的 Playwright 視覺驗證腳本。實際 `npm run verify:technical-tab` 執行仍需在可啟動 localhost server 的環境中完成。
 
 ### 15.1 Technical Agent 實作前提
 
@@ -981,6 +981,7 @@
 - [x] Technical view 顯示 overall signal、五個 signals、coverage status、technical bias、metric values、source IDs、missing data。
 - [x] `available`、`partial`、`missing`、`not_available` 的樣式必須可區分。
 - [x] `unknown` / `not_available` technical bias 不得被視覺設計成正向訊號。
+- [x] 新增 `npm run verify:technical-tab`，用 Playwright 檢查 desktop / mobile Technical tab。
 - [ ] desktop 與 mobile viewport 下，metric values、missing data、source IDs、summary 不得溢出。
 
 驗收標準：
@@ -1001,6 +1002,7 @@
 - [x] 後端測試：evaluation 能抓出 technical overclaim。
 - [x] Flask API 測試：default run endpoint 回傳 `analysis.technical`。
 - [x] 前端驗證：`npm run build` 成功。
+- [x] Playwright dependency 與 Chromium browser binary 已可被本機解析。
 - [ ] 瀏覽器驗證：desktop / mobile Technical tab 可讀、可操作、不溢出。
 
 驗收標準：
